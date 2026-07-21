@@ -1,0 +1,151 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserStatus{
+  ONLINE
+  OFFLINE 
+}
+
+enum ConversationType{
+  PRIVATE
+  GROUP
+}
+
+enum MemberRole{
+  ADMIN
+  MEMBER
+}
+
+enum MessageType{
+  TEXT
+  IMAGE
+  VIDEO
+  FILE
+  AUDIO
+}
+
+
+model User{
+  id String @id @default(cuid())
+  name String
+  username String
+  password String
+  avatar String
+  lastseen DateTime @default(now()) @map("last_seen")
+  status UserStatus @default(OFFLINE)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  messages  Message[]
+  memberships ConversationMember[]
+  readReceipts ReadReceipt[]
+
+
+  @@map("users")
+}
+
+
+model Conversation {
+  id String @id @default(cuid())
+  type ConversationType @default(PRIVATE)
+  name String? //for grp name etc
+  avatar String?
+  lastMessageId String? @unique @map("last_message_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  lastMessage Message? @relation("LastMessage" , fields:[lastMessageId],references:[id] , onDelete: SetNull)
+  
+  messages   Message[]  @relation("ConversationMessages")
+  members  ConversationMember[]
+
+  @@map("conversations")
+
+}
+
+
+model ConversationMember{
+  id String @id @default(cuid())
+  conversationId String @map("conversation_id")
+  userId String @map("user_id")
+  lastReadMessageId String? @map("last_read_message_id")
+  role MemberRole @default(MEMBER)
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastReadMessage Message?    @relation("LastReadMessage", fields: [lastReadMessageId], references: [id], onDelete: SetNull)
+  @@unique([conversationId, userId]) // A user can only be in a conversation once
+  @@map("conversation_members")
+}
+
+model Message {
+  id String @id @default(cuid())
+  conversationId String @map("conversation_id")
+  senderId String @map("sender_id")
+  type MessageType @default(TEXT)
+  content String? //sometimes msg can be a pure attachment thats why it can be nullable
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  editedAt DateTime @map("edited_at")
+  deletedAt DateTime @map("deleted_at")
+
+
+  conversation         Conversation         @relation("ConversationMessages", fields: [conversationId], references: [id], onDelete: Cascade)
+  sender               User                 @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  attachments          Attachment[]
+  readReceipts         ReadReceipt[]
+  lastMessageOf        Conversation?        @relation("LastMessage")
+  lastReadBy           ConversationMember[] @relation("LastReadMessage")
+  @@index([conversationId, createdAt]) // Fast message pagination
+  @@map("messages")
+
+
+
+
+}
+
+
+model Attachment {
+  id String @id @default(cuid())
+  messageId String @map("message_id")
+  url String 
+  mimeType String @map("mime_type")
+  size Int 
+  fileName String? @map("file_name")
+
+
+  message    Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  @@map("attachments")
+
+}
+
+model ReadReceipt {
+  id String @id @default(cuid())
+  messageId String @map("message_id")
+  userId String @map("user_id")
+  readAt DateTime @default(now()) @map("read_at")
+  
+  message    Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId]) // One receipt per user per message
+  @@map("read_receipts")
+  
+}
+
+
+
