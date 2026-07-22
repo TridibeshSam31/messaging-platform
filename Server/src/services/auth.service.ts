@@ -26,7 +26,7 @@ export class AuthService{
         data: {
         name,
         username,
-        password: hashedPassword,
+        password: hashedPassword, //stored the hashedPassword in  the user column in databse 
         status: "OFFLINE",
         },
        select: {
