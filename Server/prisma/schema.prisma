@@ -40,9 +40,9 @@ enum MessageType{
 model User{
   id String @id @default(cuid())
   name String
-  username String
+  username String @unique
   password String
-  avatar String
+  avatar String?
   lastseen DateTime @default(now()) @map("last_seen")
   status UserStatus @default(OFFLINE)
   createdAt DateTime @default(now()) @map("created_at")
@@ -100,8 +100,8 @@ model Message {
   content String? //sometimes msg can be a pure attachment thats why it can be nullable
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  editedAt DateTime @map("edited_at")
-  deletedAt DateTime @map("deleted_at")
+  editedAt DateTime? @map("edited_at")
+  deletedAt DateTime? @map("deleted_at")
 
 
   conversation         Conversation         @relation("ConversationMessages", fields: [conversationId], references: [id], onDelete: Cascade)
