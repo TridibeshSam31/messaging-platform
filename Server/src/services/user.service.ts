@@ -65,7 +65,7 @@ export class UserService{
 
     static async updateProfile(userId: string, data: { name?: string; username?: string }){
 
-        
+
         if (data.username) {
             const existing = await prisma.user.findFirst({
                 where: {
@@ -81,8 +81,81 @@ export class UserService{
             }
         }
 
+
+        return prisma.user.update({
+         where: { id: userId },
+         data,
+         select: { id: true, name: true, username: true, avatar: true },
+        });
         
+      
 
         
     }
+
+
+    static async updateAvatar(userId: string, avatarUrl: string){
+
+        const user = await prisma.user.update({
+            where:{
+                id:userId
+            },
+            data:{
+                avatar:avatarUrl
+            },
+            select:{
+                id:true,
+                name:true,
+                username:true,
+                avatar:true
+
+            }
+        })
+
+
+        return user
+    }
+
+    static async searchUsers(query: string, excludeUserId: string){
+
+        const searchUser = await prisma.user.findMany({
+            where:{
+              id:{
+                not:excludeUserId
+              },
+              OR:[
+                {name:{contains:query , mode:"insensitive"}},
+                { username: { contains: query, mode: "insensitive" }}
+              ]
+            },
+            select:{
+                id:true,
+                name:true,
+                avatar:true,
+                username:true,
+                status:true
+            },
+            take:20//Limit i.e dont send more than 20 users
+        })
+    }
+
+
+    
+
+
+
 }
+
+
+/*
+Prisma's where clause is an object-based representation of SQL's WHERE statement.
+ Every property inside where acts as a filter on the database query. 
+ If multiple fields are written directly inside the where object, Prisma combines them using an implicit AND condition. For more complex filtering, Prisma provides logical operators such as OR, AND, and NOT. Field operators like contains, startsWith, endsWith, gt, gte, lt, lte, and not allow expressive comparisons without writing raw SQL.
+  For example, id: { not: excludeUserId } translates to id != excludeUserId, while contains performs a SQL LIKE '%value%' search (or ILIKE for case-insensitive matching when mode: "insensitive" is used). 
+  The OR operator accepts an array of conditions and returns records if any one of them matches, making it useful for search functionality such as matching either a user's name or username. 
+  Finally, select controls which columns are returned from the database, improving both security (by excluding fields like passwords) and performance (by fetching only the required data), while take limits the number of records returned, similar to SQL's LIMIT clause. 
+  Thinking of the query in SQL first and then expressing it in Prisma is often the easiest way to understand and write complex Prisma queries.
+
+
+
+*/
