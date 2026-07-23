@@ -37,3 +37,4 @@ export const createConvSchema = z.object({
   name: z.string().min(3).optional(), // For GROUP
   memberIds: z.array(z.string()).optional(), // For GROUP
 });
+
