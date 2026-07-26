@@ -24,12 +24,14 @@ Route Messages
 
 */
 
-import createServer from "ws"
+import createServer from "http"
 import {WebSocketServer,WebSocket} from "ws"
 import { verifyAccessToken } from "../lib/jwt.js"
 import { handlePresence } from "./handlers/presence.handler.js"
 import {handleTyping} from "./handlers/typing.handler.js"
+import { handleChat } from "./handlers/chat.handler.js"
 
+//@ts-ignore
 const httpServer = createServer()
 
 httpServer.listen(8080,()=>{
@@ -103,16 +105,21 @@ wss.on("connection",(ws,req)=>{
                 const msg = JSON.parse(raw.toString())
 
                 if(msg.type ==="join_room"){
-                    handlePresence(ws,message)
+                    handlePresence(ws,msg)
+                    return
                 }else if(msg.type === "leave_room"){
-                    handlePresence(ws,message)
+                    handlePresence(ws,msg)
+                    return
                 }else if(msg.type === "chat"){
-                    handlePresence(ws,message)
+                    await handleChat(ws, msg)   
+                    return
                 }else if(msg.type === "typing"){
-                    handleTyping(ws,message)
+                    handleTyping(ws,msg)
+                    return
 
                 }else if(msg.type === "stop_typing"){
-                    handleTyping(ws,message)
+                    handleTyping(ws,msg)
+                    return
                 }
 
                 ws.send(JSON.stringify({
@@ -188,3 +195,70 @@ wss.on("connection",(ws,req)=>{
 
     }
 })
+
+/*
+|--------------------------------------------------------------------------
+| In-Memory Connection Store
+|--------------------------------------------------------------------------
+|
+| Since the native WebSocket (ws) library does not provide built-in support
+| for user sessions, rooms, or online presence, we maintain our own
+| in-memory state using Map and Set.
+|
+| Map stores a unique key-value pair, whereas Set stores a collection of
+| unique values (no duplicates). Together they help us efficiently manage
+| WebSocket connections during the lifetime of the server.
+|
+| -------------------------------------------------------------------------
+| clients : Map<WebSocket, ClientData>
+| -------------------------------------------------------------------------
+| Associates each WebSocket connection with its authenticated user.
+|
+| Example:
+|   ws1 ──► { userId: "101" }
+|   ws2 ──► { userId: "205" }
+|
+| Used to identify the sender whenever a message is received.
+|
+| -------------------------------------------------------------------------
+| rooms : Map<string, Set<WebSocket>>
+| -------------------------------------------------------------------------
+| Maps a room ID to all sockets currently connected to that room.
+|
+| Example:
+|   "room1" ──► { ws1, ws2, ws3 }
+|   "room2" ──► { ws2, ws4 }
+|
+| The Set ensures a socket cannot join the same room multiple times and
+| allows efficient broadcasting to every participant.
+|
+| -------------------------------------------------------------------------
+| onlineUsers : Map<string, Set<WebSocket>>
+| -------------------------------------------------------------------------
+| Maps a user ID to all active WebSocket connections of that user.
+|
+| Example:
+|   "101" ──► { LaptopWS, PhoneWS }
+|   "205" ──► { LaptopWS }
+|
+| This supports multiple active sessions (e.g., phone + laptop) while
+| accurately tracking whether a user is online.
+|
+| -------------------------------------------------------------------------
+| socketRooms : Map<WebSocket, Set<string>>
+| -------------------------------------------------------------------------
+| Reverse mapping of rooms, storing all room IDs joined by a socket.
+|
+| Example:
+|   ws1 ──► { "room1", "room2" }
+|   ws2 ──► { "room1" }
+|
+| During disconnection, this lets us quickly remove the socket from every
+| joined room without iterating through all rooms in memory.
+|
+| -------------------------------------------------------------------------
+| Together these four data structures act as the in-memory state of the
+| chat server, enabling authentication, room management, presence tracking,
+| broadcasting, multi-device support, and efficient cleanup on disconnect.
+|--------------------------------------------------------------------------
+*/

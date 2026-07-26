@@ -50,13 +50,14 @@ export async function handleChat(ws:WebSocket,data:chatMessage){
     const chatMessage = await prisma.message.create({
         data:{
             senderId:sender.userId,
-            conversationId,
+            conversationId:data.roomId,
             content:data.message
         }
     })
 
     for (const socket of sockets) {
-
+        
+         if (socket === ws) continue
         socket.send(JSON.stringify({
 
             type: "chat",

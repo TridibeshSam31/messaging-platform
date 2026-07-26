@@ -88,6 +88,14 @@ export function handlePresence(ws:WebSocket,message:JoinRoomMessage|LeaveRoomMes
 
         socketRooms.get(ws)!.delete(roomId)
 
+        
+        for (const socket of rooms.get(roomId) ?? []) {
+
+        const currentUser = clients.get(ws)
+        socket.send(JSON.stringify({ type: "user_left", roomId, userId: currentUser?.userId }))
+        
+        }
+
         if(rooms.get(roomId)?.size==0){
             rooms.delete(roomId)
         }
