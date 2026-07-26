@@ -262,3 +262,23 @@ wss.on("connection",(ws,req)=>{
 | broadcasting, multi-device support, and efficient cleanup on disconnect.
 |--------------------------------------------------------------------------
 */
+
+/*
+
+
+Every handler — WebSocket or HTTP — follows the same Guard → Act → Broadcast pattern: first you find out who is acting (clients.get(ws) / JWT), then you check where they're allowed to act (rooms.get(roomId) / assertMembership), and if either guard fails you return immediately without touching anything.
+Only after both guards pass do you mutate state or hit the database, and only then do you notify whoever needs to know — broadcasting to the room, sending an ACK to the sender, or returning a response. 
+This order is non-negotiable because you can never broadcast before you've persisted, never persist before you've authorized, and never authorize before you've identified — and this exact same sequence repeats at every layer of the stack: middleware, controller, service, and socket handler. 
+It is almost universally applicable, with two natural exceptions — public endpoints like login where identity is being established for the first time so there's no prior identity guard, and pure read operations where nothing changes so there's no broadcast step — but even in those cases, the core principle of validate before you act never changes
+
+
+
+
+
+
+
+
+
+
+
+*/
