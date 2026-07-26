@@ -27,7 +27,8 @@ Route Messages
 import createServer from "ws"
 import {WebSocketServer,WebSocket} from "ws"
 import { verifyAccessToken } from "../lib/jwt.js"
-
+import { handlePresence } from "./handlers/presence.handler.js"
+import {handleTyping} from "./handlers/typing.handler.js"
 
 const httpServer = createServer()
 
