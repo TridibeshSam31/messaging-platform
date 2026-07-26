@@ -271,14 +271,12 @@ Only after both guards pass do you mutate state or hit the database, and only th
 This order is non-negotiable because you can never broadcast before you've persisted, never persist before you've authorized, and never authorize before you've identified — and this exact same sequence repeats at every layer of the stack: middleware, controller, service, and socket handler. 
 It is almost universally applicable, with two natural exceptions — public endpoints like login where identity is being established for the first time so there's no prior identity guard, and pure read operations where nothing changes so there's no broadcast step — but even in those cases, the core principle of validate before you act never changes
 
-
-
-
-
-
-
-
-
+Universal pattern hai yeh
+1. FIND THE SENDER (from clients map)
+2. VALIDATE INPUT (check required fields)
+3. FIND THE ROOM (from rooms map)
+4. DO THE WORK (DB write / state mutation)
+5. BROADCAST (to others or self)
 
 
 */
