@@ -9,26 +9,27 @@ Read receipt
 */
 
 import { WebSocket } from "ws";
-import {clients,rooms} from "../index.js"
+import { clients, rooms } from "../index.js"
 import { prisma } from "../../lib/prisma.js";
+import { MessageHandlerClass } from "../../services/message.service.js";
 
 
-interface chatMessage{
-    type:"chat",
-    roomId:string,
-    message:string
+interface chatMessage {
+    type: "chat",
+    roomId: string,
+    message: string
 }
 
-export async function handleChat(ws:WebSocket,data:chatMessage){
+export async function handleChat(ws: WebSocket, data: chatMessage) {
 
     //find sender , find room , create msg object and send
 
     const sender = clients.get(ws)
 
-    if(!sender){
+    if (!sender) {
         ws.send(JSON.stringify({
-            type:"error",
-            message:"Unauthorized"
+            type: "error",
+            message: "Unauthorized"
         }))
 
         return
@@ -38,41 +39,35 @@ export async function handleChat(ws:WebSocket,data:chatMessage){
 
     const sockets = rooms.get(data.roomId)
 
-    if(!sockets){
+    if (!sockets) {
         ws.send(JSON.stringify({
-            type:"error",
-            message:"Room not Found"
+            type: "error",
+            message: "Room not Found"
         }))
 
         return
     }
 
-    const chatMessage = await prisma.message.create({
-        data:{
-            senderId:sender.userId,
-            conversationId:data.roomId,
-            content:data.message
-        }
-    })
+    const chatMessage = await MessageHandlerClass.sendMessage(
+        data.roomId,
+        data.message,
+        sender.userId,
+        { type: "TEXT", content: data.message }
+    );
 
     for (const socket of sockets) {
-        
-         if (socket === ws) continue
+        if (socket === ws) continue;
         socket.send(JSON.stringify({
-
             type: "chat",
-
             data: chatMessage
-
         }));
-
     }
 
     ws.send(JSON.stringify({
-
         type: "message_ack",
-
-        messageId: chatMessage.id
-
+        messageId: chatMessage.id,
+        data:chatMessage
     }));
+
+    
 }
