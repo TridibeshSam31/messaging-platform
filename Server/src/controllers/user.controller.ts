@@ -33,46 +33,47 @@ Outputs: 200 OK with user list.
 
 import { Request, Response, NextFunction } from "express";
 import { UserService } from "../services/user.service.js";
-import{updateProfileSchema} from "../types/index.js"
+import { updateProfileSchema } from "../types/index.js"
 import z from "zod"
-export class UserController{
-    static async getMe(req:Request , res:Response , next:NextFunction){
 
-        try{
-            const userProfile = await UserService.getProfile(req.userId!)
-            return res.status(200).json({userProfile})
-        }catch(error){
+export class UserController {
+  static async getMe(req: Request, res: Response, next: NextFunction) {
 
-            next(error)
-
-        }
-
-        
-    }
-
-    static async PatchMe(req:Request , res:Response , next:NextFunction){
-
-        try{
-
-            const userProfileParse = updateProfileSchema.safeParse(req.body)
-            if(!userProfileParse.success){
-                return res.status(400).json({error: userProfileParse.error})
-            }
-            const updated = await UserService.updateProfile(req.userId!, userProfileParse.data as { name?: string; username?: string; });
-            return res.status(200).json({updated})
-
-        }catch(error){
-            next(error)
-        }
-
-        
-        
-    }
-
-
-    static async patchAvatar(req: Request, res: Response, next: NextFunction) {
     try {
-        //@ts-ignore
+      const userProfile = await UserService.getProfile(req.userId!)
+      return res.status(200).json({ userProfile })
+    } catch (error) {
+
+      next(error)
+
+    }
+
+
+  }
+
+  static async PatchMe(req: Request, res: Response, next: NextFunction) {
+
+    try {
+
+      const userProfileParse = updateProfileSchema.safeParse(req.body)
+      if (!userProfileParse.success) {
+        return res.status(400).json({ error: userProfileParse.error })
+      }
+      const updated = await UserService.updateProfile(req.userId!, userProfileParse.data as { name?: string; username?: string; });
+      return res.status(200).json({ updated })
+
+    } catch (error) {
+      next(error)
+    }
+
+
+
+  }
+
+
+  static async patchAvatar(req: Request, res: Response, next: NextFunction) {
+    try {
+      //@ts-ignore
       if (!req.file) {
         return res.status(400).json({ error: "No file uploaded" });
       }
@@ -93,5 +94,17 @@ export class UserController{
       next(error);
     }
   }
-}
 
+  static async getUserById(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = z.string().parse(req.params.id)
+
+      if (!userId) return res.status(400).json({ error: "userId is required" })
+
+      const user = await UserService.getUserById(userId)
+      return res.status(200).json(user)
+    } catch (error) {
+      next(error)
+    }
+  }
+}

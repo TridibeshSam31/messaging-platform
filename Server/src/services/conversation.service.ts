@@ -239,8 +239,86 @@ export class ConversationService{
     });
    }
 
-    
+    static async getConversationById(conversationId: string, userId: string) {
+        await this.assertMembership(conversationId, userId)
 
+        const conversation = await prisma.conversation.findUnique({
+            where: { id: conversationId },
+            include: {
+                members: {
+                    include: {
+                        user: { select: { id: true, name: true, avatar: true, status: true } }
+                    }
+                },
+                lastMessage: {
+                    include: {
+                        sender: { select: { id: true, name: true, avatar: true } }
+                    }
+                }
+            }
+        })
 
-    
+        if (!conversation) {
+            throw new AppError(404, "Conversation not found")
+        }
+
+        return conversation
+    }
+
+    static async addMember(conversationId: string, actorId: string, newUserId: string) {
+        const actor = await this.assertMembership(conversationId, actorId)
+
+        if (actor.role !== "ADMIN") {
+            throw new AppError(403, "Only admins can add members")
+        }
+
+        // Prevent duplicate membership
+        const alreadyMember = await prisma.conversationMember.findUnique({
+            where: { conversationId_userId: { conversationId, userId: newUserId } }
+        })
+
+        if (alreadyMember) {
+            throw new AppError(409, "User is already a member of this conversation")
+        }
+
+        return prisma.conversationMember.create({
+            data: { conversationId, userId: newUserId, role: "MEMBER" },
+            include: { user: { select: { id: true, name: true, avatar: true, status: true } } }
+        })
+    }
+
+    static async removeMember(conversationId: string, actorId: string, targetUserId: string) {
+        const actor = await this.assertMembership(conversationId, actorId)
+
+        if (actor.role !== "ADMIN") {
+            throw new AppError(403, "Only admins can remove members")
+        }
+
+        // Can't remove yourself with this endpoint — use leaveConversation instead
+        if (actorId === targetUserId) {
+            throw new AppError(400, "Use the leave endpoint to remove yourself")
+        }
+
+        await this.assertMembership(conversationId, targetUserId)
+
+        return prisma.conversationMember.delete({
+            where: { conversationId_userId: { conversationId, userId: targetUserId } }
+        })
+    }
+
+    static async changeMemberRole(conversationId: string, actorId: string, targetUserId: string, role: "ADMIN" | "MEMBER") {
+        const actor = await this.assertMembership(conversationId, actorId)
+
+        if (actor.role !== "ADMIN") {
+            throw new AppError(403, "Only admins can change member roles")
+        }
+
+        await this.assertMembership(conversationId, targetUserId)
+
+        return prisma.conversationMember.update({
+            where: { conversationId_userId: { conversationId, userId: targetUserId } },
+            data: { role },
+            include: { user: { select: { id: true, name: true, avatar: true } } }
+        })
+    }
 }

@@ -116,6 +116,27 @@ export class UserService{
         return user
     }
 
+    static async getUserById(userId: string) {
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                name: true,
+                username: true,
+                avatar: true,
+                status: true,
+                lastseen: true,
+                createdAt: true,
+            }
+        })
+
+        if (!user) {
+            throw new AppError(404, "User not found")
+        }
+
+        return user
+    }
+
     static async searchUsers(query: string, excludeUserId: string){
 
         const searchUser = await prisma.user.findMany({

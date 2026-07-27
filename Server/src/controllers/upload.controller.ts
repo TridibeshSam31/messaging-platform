@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { uploadFile } from "../services/upload.service.js";
+import { uploadFile as uploadFileService } from "../services/upload.service.js";
 
 export const uploadController = async (
   req: Request,
@@ -14,7 +14,7 @@ export const uploadController = async (
       });
     }
 
-    const attachment = await uploadFile(req.file);
+    const attachment = await uploadFileService(req.file);
 
     return res.status(200).json({
       success: true,
@@ -25,3 +25,6 @@ export const uploadController = async (
     next(error);
   }
 };
+
+
+export const uploadFile = uploadController;

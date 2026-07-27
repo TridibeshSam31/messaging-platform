@@ -109,5 +109,47 @@ export class ConversationController{
     }
    }
 
-    
+   // GET /api/conversations/:id — get conversation details + members
+   static async getConversationById(req:Request,res:Response,next:NextFunction){
+    try {
+      const conversation = await ConversationService.getConversationById(req.params.id as string, req.userId!)
+      return res.status(200).json(conversation)
+    } catch (error) {
+      next(error)
+    }
+   }
+
+   // POST /api/conversations/:id/members — add member (admin only)
+   static async postMember(req:Request,res:Response,next:NextFunction){
+    try {
+      const { userId: newUserId } = z.object({ userId: z.string() }).parse(req.body)
+      const member = await ConversationService.addMember(req.params.id as string, req.userId!, newUserId)
+      return res.status(201).json(member)
+    } catch (error) {
+      next(error)
+    }
+   }
+
+   // DELETE /api/conversations/:id/members/:userId — remove member (admin only)
+   static async deleteMember(req:Request,res:Response,next:NextFunction){
+    try {
+      const userId = req.params.userId as string
+      const removed = await ConversationService.removeMember(req.params.id as string, req.userId!, userId)
+      return res.status(200).json({ message: "Member removed successfully", removed })
+    } catch (error) {
+      next(error)
+    }
+   }
+
+   // PATCH /api/conversations/:id/members/:userId/role — change role (admin only)
+   static async patchMemberRole(req:Request,res:Response,next:NextFunction){
+    try {
+      const { role } = z.object({ role: z.enum(["ADMIN", "MEMBER"]) }).parse(req.body)
+      const userId = req.params.userId as string ?? undefined
+      const updated = await ConversationService.changeMemberRole(req.params.id as string, req.userId!, userId, role)
+      return res.status(200).json(updated)
+    } catch (error) {
+      next(error)
+    }
+   }
 }

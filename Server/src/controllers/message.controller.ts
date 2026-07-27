@@ -27,12 +27,15 @@ export class MessageController {
   static async postMessage(req: Request, res: Response, next: NextFunction) {
     try {
       const validated = sendMessageSchema.parse(req.body);
+      const convId = (Array.isArray(req.params.id) ? req.params.id[0] : req.params.id)!;
       const message = await MessageHandlerClass.sendMessage(
-        (Array.isArray(req.params.id) ? req.params.id[0] : req.params.id)!, // Conversation ID
-        req.userId!,
-        validated.type,
-        //@ts-ignore
-        validated.content ?? ""
+        convId,                        // conversationId
+        validated.content ?? "",       // content (2nd param)
+        req.userId!,                   // senderId (3rd param)
+        {
+          type: validated.type,
+          ...(validated.content !== undefined ? { content: validated.content } : {}),
+        }
       );
       return res.status(201).json(message);
     } catch (error) {
