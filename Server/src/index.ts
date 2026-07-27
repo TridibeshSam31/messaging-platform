@@ -13,6 +13,7 @@ import messageRoutes from "./routes/message.routes.js";
 import uploadRoutes from "./routes/upload.routes.js";
 
 import { errorHandler } from "./middleware/errorHandler.js";
+import { limiter } from "./lib/rate-limit.js";
 import dotenv from "dotenv"
 
 dotenv.config();
@@ -37,6 +38,7 @@ app.get("/", (req, res) => {
   });
 });
 
+app.use(limiter)
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api", conversationRoutes);
