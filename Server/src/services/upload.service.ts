@@ -1,7 +1,6 @@
-import { v2 as cloudinary } from "cloudinary"
-const streamifier = require("streamifier") as {
-  createReadStream(buffer: Buffer): NodeJS.ReadableStream;
-};
+import cloudinary from "../lib/cloudinary.js";
+//@ts-ignore
+import * as streamifier from "streamifier";
 
 /*
 

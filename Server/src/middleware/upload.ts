@@ -29,6 +29,7 @@ const fileFilter = (req:Request , file:Express.Multer.File,cb:FileFilterCallback
         return cb(new Error("Unsupported file type."))
 
     }
+    cb(null, true);
 
 }
 

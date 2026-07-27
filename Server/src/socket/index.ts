@@ -24,7 +24,7 @@ Route Messages
 
 */
 
-import createServer from "http"
+import {createServer} from "http"
 import {WebSocketServer,WebSocket} from "ws"
 import { verifyAccessToken } from "../lib/jwt.js"
 import { handlePresence } from "./handlers/presence.handler.js"
@@ -38,10 +38,9 @@ httpServer.listen(8080,()=>{
     console.log("websocket server running on port 8080")
 })
 
-const wss = new WebSocketServer({
-    server:httpServer
 
-})
+
+
 
 //creating maps for user , rooms , socket , onlineUsers etc
 
@@ -59,7 +58,13 @@ export const socketRooms = new Map<WebSocket,Set<string>>()
 
 //estamblishing connection
 
-wss.on("connection",(ws,req)=>{
+export function initializeWebSocket(server: typeof httpServer) {
+    const wss = new WebSocketServer({
+       server
+
+    })
+
+    wss.on("connection",(ws,req)=>{
     //ws = socket object , or we can write socket also no problem
     try{
         //jwt authentication
@@ -195,6 +200,10 @@ wss.on("connection",(ws,req)=>{
 
     }
 })
+
+}
+
+
 
 /*
 |--------------------------------------------------------------------------

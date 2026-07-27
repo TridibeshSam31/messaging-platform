@@ -35,6 +35,7 @@ import { Request, Response, NextFunction } from "express";
 import { UserService } from "../services/user.service.js";
 import { updateProfileSchema } from "../types/index.js"
 import z from "zod"
+import { uploadFile } from "../services/upload.service.js";
 
 export class UserController {
   static async getMe(req: Request, res: Response, next: NextFunction) {
@@ -77,10 +78,23 @@ export class UserController {
       if (!req.file) {
         return res.status(400).json({ error: "No file uploaded" });
       }
-      //@ts-ignore
-      const avatarUrl = `/uploads/${req.file.filename}`;
-      const updated = await UserService.updateAvatar(req.userId!, avatarUrl);
-      return res.status(200).json(updated);
+      
+      //upload file to cloudinary
+      const attachment = await uploadFile(req.file)
+       
+      // Save Cloudinary URL in DB
+      const updated = await UserService.updateAvatar(
+        req.userId!,
+        attachment.url
+      );
+
+      return res.status(200).json({
+        message: "Avatar updated successfully",
+        user: updated,
+      });
+
+
+      
     } catch (error) {
       next(error);
     }
