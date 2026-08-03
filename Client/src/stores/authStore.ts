@@ -54,9 +54,9 @@ type AuthStore = {
 export const useAuthStore = create<AuthStore>((set)=>({
     //set initial states
 
-    user:null,
-    accessToken:null
-    loading:true,
+    user: null,
+    accessToken: null,
+    loading: true,
 
 
     //write the defined actions
@@ -69,6 +69,34 @@ export const useAuthStore = create<AuthStore>((set)=>({
         })
     },
 
+    logout:() =>{
+        set({
+            user:null,
+            accessToken:null,
+            loading:false
+        })
+    },
+
+    setUser:(user) =>{
+        set({user})
+    },
+
+    setAccessToken:(token) => {
+        set({accessToken:token})
+    },
+
+    setLoading:(loading) => {
+        set({loading})
+    },
+
+    updateUser:(changes) => {
+        set((state) => ({
+            user: state.user ? {...state.user, ...changes} : state.user
+        }))
+    }
+
     
+
+
 
 }))
