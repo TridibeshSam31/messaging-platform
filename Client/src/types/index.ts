@@ -68,3 +68,10 @@ export type ConversationMember = {
         lastSeen:string
     }
 }
+
+export type  UploadedFile = {
+  url: string
+  mimeType: string
+  size: number
+  fileName: string
+}
