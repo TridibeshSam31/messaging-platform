@@ -41,8 +41,8 @@ app.get("/", (req, res) => {
 app.use(limiter)
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
-app.use("/api", conversationRoutes);
-app.use("/api", messageRoutes);
+app.use("/api/conversations", conversationRoutes);
+app.use("/api/messages", messageRoutes);
 app.use("/api/uploads", uploadRoutes);
 
 app.use((err:any, req:Request, res:Response, next:NextFunction) => {
