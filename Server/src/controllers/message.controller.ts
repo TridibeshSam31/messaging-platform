@@ -32,9 +32,11 @@ export class MessageController {
         convId,                        // conversationId
         validated.content ?? "",       // content (2nd param)
         req.userId!,                   // senderId (3rd param)
+        //@ts-ignore
         {
           type: validated.type,
           ...(validated.content !== undefined ? { content: validated.content } : {}),
+           ...(validated.attachments !== undefined ? { attachment: validated.attachments } : {})
         }
       );
       return res.status(201).json(message);
