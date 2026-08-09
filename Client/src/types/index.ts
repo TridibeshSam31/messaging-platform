@@ -9,22 +9,22 @@ export type User = {
 }
 
 export type Message = {
-    id:string,
-    conversationId:string,
-    senderId:string,
-    type:"TEXT"|"IMAGE"|"VIDEO"|"FILE",
-    content:string|null
-    createdAt:string,
-    editedAt:string|null
-    deletedAt:string|null 
-    sender:{
-        id:string
-        name:string
-        avatar:string|null
-    }
-    attachments:Attachment[]
+  id: string
+  conversationId: string
+  senderId: string
+  type: "TEXT" | "IMAGE" | "VIDEO" | "FILE"
+  content: string | null
+  createdAt: string
+  editedAt: string | null
+  deletedAt: string | null
+  sender: {
+    id: string
+    name: string
+    avatar: string | null
+  }
+  attachments: Attachment[]
+  readReceipts: ReadReceipt[]   
 }
-
 
 export type Attachment = {
     id:string,
@@ -34,15 +34,15 @@ export type Attachment = {
     fileName:string|null
 }
 
-export type ReadRecipt = {
-    messageId :string,
-    userId:string
-    readAt:string
-    user:{
-        id:string
-        name:string
-        avatar:string|null
-    }
+export type ReadReceipt = {
+  messageId: string
+  userId: string
+  readAt: string
+  user: {
+    id: string
+    name: string
+    avatar: string | null
+  }
 }
 
 export type Conversation = {
