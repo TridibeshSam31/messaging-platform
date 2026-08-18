@@ -31,6 +31,7 @@ Returns: PublicUser[]
 
 import {prisma} from "../lib/prisma.js"
 import { AppError } from "../middleware/errorHandler.js"
+import { onlineUsers } from "../socket/index.js"
 
 
 
@@ -58,7 +59,8 @@ export class UserService{
             throw new AppError(404, "user not found")
         }
 
-        return user
+        const isLiveOnline = onlineUsers.has(user.id) && (onlineUsers.get(user.id)?.size ?? 0) > 0;
+        return { ...user, status: isLiveOnline ? "ONLINE" : "OFFLINE" };
 
 
     }
@@ -134,7 +136,8 @@ export class UserService{
             throw new AppError(404, "User not found")
         }
 
-        return user
+       const isLiveOnline = onlineUsers.has(user.id) && (onlineUsers.get(user.id)?.size ?? 0) > 0;
+        return { ...user, status: isLiveOnline ? "ONLINE" : "OFFLINE" };
     }
 
     static async searchUsers(query: string, excludeUserId: string){
@@ -158,7 +161,13 @@ export class UserService{
             },
             take:20//Limit i.e dont send more than 20 users
         })
-        return searchUser
+        return searchUser.map((u) => {
+            const isLiveOnline = onlineUsers.has(u.id) && (onlineUsers.get(u.id)?.size ?? 0) > 0;
+            return {
+                ...u,
+                status: isLiveOnline ? "ONLINE" : "OFFLINE",
+            };
+        })
     }
 
 

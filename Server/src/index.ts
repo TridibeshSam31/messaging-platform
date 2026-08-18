@@ -57,6 +57,11 @@ async function startServer() {
     await prisma.$connect();
     console.log(" Database connected");
 
+    // Reset any stale presence statuses left from previous server runs
+    await prisma.user.updateMany({
+      data: { status: "OFFLINE" },
+    });
+
     // Create HTTP server
     const server = http.createServer(app);
 

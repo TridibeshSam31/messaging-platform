@@ -30,6 +30,7 @@ Logic: Verify actor is ADMIN in the conversation. Delete membership row for targ
 
 import {prisma} from "../lib/prisma.js"
 import { AppError } from "../middleware/errorHandler.js"
+import { onlineUsers } from "../socket/index.js"
 
 
 export class ConversationService{
@@ -102,7 +103,19 @@ export class ConversationService{
             },
           });
         }
-        return { ...conv, unreadCount };
+
+         // Dynamically compute real-time status from active socket connections
+        const liveMembers = conv.members.map((m) => {
+          const isLiveOnline = onlineUsers.has(m.userId) && (onlineUsers.get(m.userId)?.size ?? 0) > 0;
+          return {
+            ...m,
+            user: {
+              ...m.user,
+              status: isLiveOnline ? "ONLINE" : "OFFLINE",
+            },
+          };
+        });
+        return { ...conv, members: liveMembers, unreadCount };
       })
     );
   }
