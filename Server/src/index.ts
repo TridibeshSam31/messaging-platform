@@ -84,3 +84,6 @@ async function shutdown() {
 
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
+
+//from process I mean node js process object which is a global object in node js and it is used to handle the 
+//events like SIGINT and SIGTERM which are used to handle the termination of the process.
