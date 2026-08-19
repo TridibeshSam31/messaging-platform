@@ -26,10 +26,10 @@ export function ChatWindow() {
   useEffect(() => {
     if (!activeConversationId || convMessages.length === 0 || !user || !conversation || !readReceiptsEnabled) return
 
-    const lastMsg = [...convMessages].reverse().find(m => m.type !== "SYSTEM")
+    const lastMsg = convMessages[convMessages.length - 1]
     if (lastMsg && lastMsg.senderId !== user.id) {
       const myMember = conversation.members.find((m) => m.userId === user.id)
-      if (myMember && myMember.lastReadMessageId !== lastMsg.id) {
+      if (myMember) {
         sendWS({
           type: "read",
           messageId: lastMsg.id,
