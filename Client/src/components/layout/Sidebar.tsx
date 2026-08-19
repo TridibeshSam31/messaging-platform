@@ -15,7 +15,7 @@ import { useChatStore } from "@/stores/chatStore"
 import { useAuth } from "@/hooks/useAuth"
 import { ConversationList } from "@/components/chat/ConversationList"
 import { CreateGroupModal } from "@/components/group/CreateGroupModal"
-import { StartPrivateChatModal } from "@/components/chat/StartPrivateChatModal"
+import { StartPrivateChatModal } from "@/components/chat/StartPrivateChatModel"
 import { ProfileModal } from "@/components/profile/ProfileModal"
 
 export function Sidebar() {
