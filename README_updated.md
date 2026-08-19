@@ -1,6 +1,6 @@
 # Messaging Platform
 
-A real-time, one-to-one and group messaging platform built with **PostgreSQL + Prisma**, an **Express** REST API, a native **WebSocket (`ws`)** real-time layer, and a **React (Vite + TypeScript)** client. The backend is organized around a strict layered architecture (routes → controllers → services → Prisma) so business logic stays fully decoupled from HTTP and transport concerns.
+A real-time, one-to-one and group messaging platform built with **PostgreSQL + Prisma**, an **Express** REST API, a native **WebSocket (`ws`)** real-time layer, and a **React (Vite + TypeScript)** client. The real-time layer intentionally uses the low-level `ws` API instead of Socket.IO to demonstrate how WebSocket authentication, rooms, presence, acknowledgements, delivery/read receipts, rate limiting, and connection lifecycle are implemented from first principles. The backend is organized around a strict layered architecture (routes → controllers → services → Prisma) so business logic stays fully decoupled from HTTP and transport concerns.
 
 > **Status: Backend functionally complete, frontend not started.** Auth, users, conversations, messages, read receipts, file uploads (Cloudinary), and the WebSocket real-time layer (presence, typing, chat) are all implemented end-to-end. The React client is still the default Vite scaffold — no auth flow, conversation list, or chat UI yet. See [Project Status](#project-status).
 
@@ -140,7 +140,7 @@ sequenceDiagram
 
 ### Real-Time Messaging Flow
 
-The real-time layer is a native `ws` `WebSocketServer`, not Socket.IO. There are no built-in rooms/namespaces — rooms, per-user socket sets, and presence are tracked manually with in-memory `Map`/`Set` structures (`clients`, `rooms`, `onlineUsers`, `socketRooms`) in `Server/src/socket/index.ts`. The client authenticates by passing the access token as a `?token=` query param on the WebSocket URL, and all events are plain JSON messages distinguished by a `type` field.
+The real-time layer is deliberately implemented with the native `ws` `WebSocketServer`, not Socket.IO. This is an intentional learning and architecture choice: instead of relying on Socket.IO's higher-level rooms, events, acknowledgements, and reconnection abstractions, the project implements those primitives explicitly. There are no built-in rooms/namespaces — rooms, per-user socket sets, and presence are tracked manually with in-memory `Map`/`Set` structures (`clients`, `rooms`, `onlineUsers`, `socketRooms`) in `Server/src/socket/index.ts`. The client authenticates by passing the access token as a `?token=` query param on the WebSocket URL, and all events are plain JSON messages distinguished by a `type` field.
 
 ```mermaid
 sequenceDiagram
@@ -186,12 +186,30 @@ sequenceDiagram
     S-->>B: user_offline event
 ```
 
-#### Why a Custom `ws` Layer Instead of Socket.IO
+#### Why Native `ws` Instead of Socket.IO
 
-Two design constraints shaped this:
+The choice is intentional: the goal is to understand the mechanics that higher-level real-time libraries normally abstract away. Two design constraints shaped this:
 
-1. **Never trust the client to self-identify.** A naive design lets a client send `{ userId: "1", msg: "..." }` directly — a malicious client could just claim to be any user. So identity is established once, at connection time, from the JWT (`?token=` query param), and the server-side `clients` map is the only source of truth for "which socket belongs to which user" from then on. Every handler looks the sender up from this map instead of trusting anything the message body says about who sent it.
-2. **Raw `ws` broadcasts to everyone connected to a server — it has no built-in rooms.** So all room/conversation scoping has to be built by hand: a message from a client should only reach the other members of that conversation, not every connected socket.
+1. **Learn the WebSocket fundamentals instead of hiding them behind a framework.** The project uses the low-level `ws` server so connection lifecycle, authentication, message routing, room membership, presence, acknowledgements, delivery/read events, rate limiting, and cleanup are explicit in the code. This makes the real-time architecture easier to reason about and demonstrates the underlying primitives that libraries such as Socket.IO build on.
+
+2. **Never trust the client to self-identify.** A naive design lets a client send `{ userId: "1", msg: "..." }` directly — a malicious client could just claim to be any user. So identity is established once, at connection time, from the JWT (`?token=` query param), and the server-side `clients` map is the only source of truth for "which socket belongs to which user" from then on. Every handler looks the sender up from this map instead of trusting anything the message body says about who sent it.
+3. **Raw `ws` broadcasts to everyone connected to a server — it has no built-in rooms.** So all room/conversation scoping has to be built by hand: a message from a client should only reach the other members of that conversation, not every connected socket.
+
+Before using a higher-level library, it is useful to understand what this project is implementing manually:
+
+| Capability | Native `ws` in this project | Socket.IO |
+|---|---|---|
+| WebSocket connection | Implemented directly with `WebSocket` / `WebSocketServer` | Provided by the library |
+| Authentication | JWT passed on the connection URL and verified manually | Application-level implementation |
+| Rooms | `Map<roomId, Set<WebSocket>>` | Built-in room abstraction |
+| Event routing | JSON `type` field + manual handlers | Named events |
+| Acknowledgements | Explicit `message_ack` event | Built-in acknowledgement mechanism |
+| Presence | `Map`/`Set` connection tracking | Must still be modeled by the application |
+| Reconnection | Planned and implemented by the client/server | Higher-level support available |
+| Heartbeat | Planned `ping`/`pong` handling | Higher-level connection management available |
+| Horizontal scaling | Planned Redis pub/sub layer | Adapter ecosystem available |
+
+This trade-off is deliberate: the project accepts more implementation work in exchange for learning and demonstrating the underlying real-time primitives.
 
 That gives four in-memory maps, each solving one piece of the puzzle (all in `Server/src/socket/index.ts`):
 
