@@ -12,7 +12,7 @@ export const conversationApi = {
     startPrivate: async (otherUserId: string): Promise<Conversation> => {
     const res = await api.post("/conversations", {
       type: "PRIVATE",
-      memberIds: [otherUserId],
+      otherUserId,
     })
     return res.data
   },

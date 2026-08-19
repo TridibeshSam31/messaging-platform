@@ -35,15 +35,6 @@ import { handleDelivered } from "./handlers/delivered.handler.js"
 import { prisma } from "../lib/prisma.js"
 
 
-//@ts-ignore
-const httpServer = createServer()
-
-httpServer.listen(8080, () => {
-    console.log("websocket server running on port 8080")
-})
-
-
-
 
 
 //creating maps for user , rooms , socket , onlineUsers etc
@@ -62,10 +53,15 @@ export const socketRooms = new Map<WebSocket, Set<string>>()
 
 //estamblishing connection
 
-export function initializeWebSocket(server: typeof httpServer) {
-    const wss = new WebSocketServer({
-        server
+export function initializeWebSocket() {
+    const httpServer = createServer()
 
+    const wss = new WebSocketServer({
+        server: httpServer
+    })
+
+    httpServer.listen(8080, () => {
+        console.log("websocket server running on port 8080")
     })
 
     wss.on("connection", async (ws, req) => {

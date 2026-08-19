@@ -4,22 +4,25 @@ import { AppLayout } from "@/components/layout/AppLayout"
 import { ChatWindow } from "@/components/chat/ChatWindow"
 import { useAuthStore } from "@/stores/authStore"
 import { useChatStore } from "@/stores/chatStore"
+import { useSocketStore } from "@/stores/socketStore"
 import { useSocketEvents } from "@/socket/useSocketEvents"
 import { useConversation } from "@/hooks/useConversation"
 
 export function ChatPage() {
   const { user, loading } = useAuthStore()
   const { conversations } = useChatStore()
+  const { connected } = useSocketStore()
 
   useConversation()
   const { joinRoom } = useSocketEvents()
 
   useEffect(() => {
+    if (!connected) return
     for (const conv of conversations) {
       joinRoom(conv.id)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversations.length])
+  }, [conversations.length, connected])
 
   if (loading) {
     return (

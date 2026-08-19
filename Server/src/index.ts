@@ -1,5 +1,4 @@
 import express, { NextFunction, Request, Response } from "express";
-import http from "http";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 
@@ -42,7 +41,7 @@ app.use(limiter)
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/conversations", conversationRoutes);
-app.use("/api/messages", messageRoutes);
+app.use("/api", messageRoutes);
 app.use("/api/uploads", uploadRoutes);
 
 app.use(errorHandler);
@@ -60,14 +59,11 @@ async function startServer() {
       data: { status: "OFFLINE" },
     });
 
-    // Create HTTP server
-    const server = http.createServer(app);
-
-    // Initialize WebSocket Server
-    initializeWebSocket(server);
+    // Initialize WebSocket Server (runs on its own port 8080)
+    initializeWebSocket();
 
     // Start Express Server
-    server.listen(PORT, () => {
+    app.listen(PORT, () => {
       console.log(` Server running on port ${PORT}`);
     });
   } catch (error) {

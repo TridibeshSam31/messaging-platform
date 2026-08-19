@@ -69,8 +69,8 @@ export class ConversationController{
             }
 
             const grpChat = await ConversationService.createGroupConversation(
-                 validation.data.name,
                  req.userId!,
+                 validation.data.name,
                  validation.data.memberIds
             )
 
