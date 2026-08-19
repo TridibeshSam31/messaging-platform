@@ -15,7 +15,7 @@ export class AppError extends Error {
     }
 }
 
-export const errorHandler = (req:Request , res:Response , next:NextFunction , err:any) => {
+export const errorHandler = (err:any , req:Request , res:Response , next:NextFunction) => {
 
  console.error("Error caught in global handler",err)
 

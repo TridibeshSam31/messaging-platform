@@ -20,7 +20,7 @@ export function useAuth(){
             
         } catch (error:any) {
             //returning backend errors
-            const msg = error.Response?.data?.error || "login failed"
+            const msg = error.response?.data?.error || "login failed"
             toast.error(msg)
             
             
@@ -38,7 +38,7 @@ export function useAuth(){
              login(result.user , result.accessToken)
              navigate("/chat")
         } catch (error:any) {
-            const msg = error.Response?.data?.error || "signup failed"
+            const msg = error.response?.data?.error || "signup failed"
             toast.error(msg)
             
         }finally{

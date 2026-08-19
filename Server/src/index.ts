@@ -45,9 +45,7 @@ app.use("/api/conversations", conversationRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/uploads", uploadRoutes);
 
-app.use((err:any, req:Request, res:Response, next:NextFunction) => {
-  errorHandler(req, res, next, err);
-});
+app.use(errorHandler);
 
 const PORT = Number(process.env.PORT) || 3000;
 
