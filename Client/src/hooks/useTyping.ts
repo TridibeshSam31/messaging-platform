@@ -1,5 +1,5 @@
 import { useCallback, useRef } from "react"
-import { sendWS } from "@/socket"
+import { sendWS } from "@/socket/index"
 import { WS_EVENTS } from "@/components/utils/constants"
 
 // How long we wait after the last keystroke before auto-emitting stop_typing —

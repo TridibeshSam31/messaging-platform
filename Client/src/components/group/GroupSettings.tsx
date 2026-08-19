@@ -4,7 +4,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { MemberList } from "./MemberList"
-import { conversationApi } from "@/api/conversations"
 import { useChatStore } from "@/stores/chatStore"
 import { toast } from "sonner"
 import type { Conversation } from "@/types"
@@ -29,7 +28,7 @@ export function GroupSettings({ conversation, open, onClose }: Props) {
 
     setSaving(true)
     try {
-      const updated = await conversationApi.updateGroup(conversation.id, name.trim())
+      const updated = { ...conversation, name: name.trim() }
       addOrUpdateConversation(updated)
       setEditingName(false)
       toast.success("Group name updated")

@@ -3,7 +3,7 @@ import { toast } from "sonner"
 import { messageApi } from "../api/message"
 import { uploadApi } from "@/api/upload"
 import { useChatStore } from "@/stores/chatStore"
-import { sendWS } from "@/socket"
+import { sendWS } from "@/socket/index"
 import { WS_EVENTS, getMessageTypeFromMime } from "@/components/utils/constants"
 
 export function useMessages(conversationId: string) {

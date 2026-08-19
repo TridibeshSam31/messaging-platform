@@ -7,7 +7,7 @@ import { ChatHeader } from "./ChatHeader"
 import { MessageList } from "./MessageList"
 import { MessageInput } from "./MessageInput"
 import { TypingIndicator } from "./TypingIndicator"
-import { sendWS } from "@/socket"
+import { sendWS } from "@/socket/index"
 
 export function ChatWindow() {
   const { activeConversationId, conversations, clearUnread, messages, updateLastRead, readReceiptsEnabled } = useChatStore()

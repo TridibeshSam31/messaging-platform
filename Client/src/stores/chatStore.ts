@@ -22,6 +22,7 @@ type ChatStore = {
   editMessageInStore: (msg: Message) => void
   deleteMessageInStore: (convId: string, msgId: string) => void
   setTyping: (convId: string, userId: string, isTyping: boolean) => void
+  markDelivered: (messageId: string) => void
   markOnline: (userId: string) => void
   markOffline: (userId: string) => void
   updateLastRead: (convId: string, userId: string, messageId: string) => void
@@ -142,6 +143,21 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     if (isTyping) current.add(userId)
     else current.delete(userId)
     set({ typingUsers: { ...get().typingUsers, [convId]: current } })
+  },
+
+  // message_delivered (delivered.handler.ts) only carries { messageId,
+  // deliveredTo, deliveredAt } — no conversationId — so we look up which
+  // conversation the message belongs to from what's already loaded.
+  markDelivered: (messageId) => {
+    const state = get()
+    for (const [convId, msgs] of Object.entries(state.messages)) {
+      if (msgs.some((m) => m.id === messageId)) {
+        set({
+          lastDeliveredMessageIds: { ...state.lastDeliveredMessageIds, [convId]: messageId },
+        })
+        return
+      }
+    }
   },
 
   markOnline: (userId) => {

@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { format } from "date-fns"
-import { Pencil, Trash2, Check, CheckCheck, FileText, Download } from "lucide-react"
+import { Pencil, Trash2, Check, CheckCheck } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,7 +18,7 @@ import {
 import { messageApi } from "@/api/message"
 import { useChatStore } from "@/stores/chatStore"
 import { toast } from "sonner"
-import type { Message, Attachment } from "@/types"
+import type { Message } from "@/types"
 
 interface Props {
   message: Message

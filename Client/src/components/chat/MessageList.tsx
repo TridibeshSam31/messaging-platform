@@ -65,7 +65,7 @@ export function MessageList({ conversationId }: Props) {
   useEffect(() => {
     if (convMessages.length > prevMessagesLength.current) {
       const lastMessage = convMessages[convMessages.length - 1]
-      if (!atBottom && lastMessage && lastMessage.senderId !== user?.id && lastMessage.type !== "SYSTEM") {
+      if (!atBottom && lastMessage && lastMessage.senderId !== user?.id) {
         setNewMessagesCount((prev) => prev + 1)
       }
     }
