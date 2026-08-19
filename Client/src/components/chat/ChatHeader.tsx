@@ -1,4 +1,5 @@
- import { Info, ChevronLeft, User as UserIcon, MoreVertical, LogOut } from "lucide-react"
+import { useState } from "react"
+import { Info, ChevronLeft, User as UserIcon, MoreVertical, LogOut, Settings } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -10,6 +11,7 @@ import { useChatStore } from "@/stores/chatStore"
 import { useAuthStore } from "@/stores/authStore"
 import { useProfileToggle } from "@/components/layout/AppLayout"
 import { conversationApi } from "@/api/conversations"
+import { GroupSettings } from "@/components/group/GroupSettings"
 import { toast } from "sonner"
 import type { Conversation } from "@/types"
 
@@ -21,6 +23,7 @@ export function ChatHeader({ conversation }: Props) {
   const { user } = useAuthStore()
   const { setActiveConversation, setConversations, conversations, onlineUsers } = useChatStore()
   const { toggleProfile } = useProfileToggle()
+  const [showGroupSettings, setShowGroupSettings] = useState(false)
 
   const other = conversation.members.find((m) => m.userId !== user?.id)
   const isGroup = conversation.type === "GROUP"
@@ -57,6 +60,7 @@ export function ChatHeader({ conversation }: Props) {
   }
 
   return (
+    <>
     <header className="flex items-center justify-between px-4 py-2.5 shrink-0 border-b border-white/[0.07] select-none bg-transparent">
       <div className="flex items-center gap-2.5 min-w-0">
         {/* Mobile back */}
@@ -115,6 +119,16 @@ export function ChatHeader({ conversation }: Props) {
             <MoreVertical className="h-4 w-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="bg-[#12111C] border border-white/15 text-white">
+            {isGroup && (
+              <DropdownMenuItem
+                id="chat-header-settings-btn"
+                className="hover:bg-white/10 focus:bg-white/10 cursor-pointer text-xs"
+                onClick={() => setShowGroupSettings(true)}
+              >
+                <Settings className="h-3.5 w-3.5 mr-2" />
+                Group Settings
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               id="chat-header-leave-btn"
               className="text-rose-400 hover:bg-rose-950/40 focus:bg-rose-950/40 cursor-pointer text-xs"
@@ -127,5 +141,14 @@ export function ChatHeader({ conversation }: Props) {
         </DropdownMenu>
       </div>
     </header>
+
+    {isGroup && (
+      <GroupSettings
+        conversation={conversation}
+        open={showGroupSettings}
+        onClose={() => setShowGroupSettings(false)}
+      />
+    )}
+    </>
   )
 }

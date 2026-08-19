@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Trash2, UserPlus, User as UserIcon } from "lucide-react"
+import { Trash2, UserPlus, ShieldCheck, ShieldOff, User as UserIcon } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -25,11 +25,30 @@ export function MemberList({ conversation, onAddMemberClick }: Props) {
   const handleRemove = async (member: ConversationMember) => {
     setLoadingId(member.userId)
     try {
-      await conversationApi.leave(conversation.id)
+      await conversationApi.removeMember(conversation.id, member.userId)
       addOrUpdateConversation({ ...conversation, members: conversation.members.filter(m => m.userId !== member.userId) })
       toast.success(`${member.user.name} removed from group`)
     } catch {
       toast.error("Failed to remove member")
+    } finally {
+      setLoadingId(null)
+    }
+  }
+
+  const handleToggleRole = async (member: ConversationMember) => {
+    const newRole = member.role === "ADMIN" ? "MEMBER" : "ADMIN"
+    setLoadingId(member.userId)
+    try {
+      await conversationApi.updateRole(conversation.id, member.userId, newRole)
+      addOrUpdateConversation({
+        ...conversation,
+        members: conversation.members.map(m =>
+          m.userId === member.userId ? { ...m, role: newRole } : m
+        ),
+      })
+      toast.success(`${member.user.name} is now ${newRole}`)
+    } catch {
+      toast.error("Failed to update role")
     } finally {
       setLoadingId(null)
     }
@@ -93,14 +112,28 @@ export function MemberList({ conversation, onAddMemberClick }: Props) {
                 </Badge>
 
                 {isAdmin && !isSelf && (
-                  <button
-                    onClick={() => handleRemove(m)}
-                    disabled={loadingId === m.userId}
-                    className="p-1 text-gray-400 hover:text-rose-400 rounded transition-colors bg-transparent border-0 cursor-pointer disabled:opacity-50"
-                    title="Remove from group"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  <>
+                    <button
+                      onClick={() => handleToggleRole(m)}
+                      disabled={loadingId === m.userId}
+                      className="p-1 text-gray-400 hover:text-purple-400 rounded transition-colors bg-transparent border-0 cursor-pointer disabled:opacity-50"
+                      title={isMemberAdmin ? "Demote to member" : "Promote to admin"}
+                    >
+                      {isMemberAdmin ? (
+                        <ShieldOff className="h-3.5 w-3.5" />
+                      ) : (
+                        <ShieldCheck className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => handleRemove(m)}
+                      disabled={loadingId === m.userId}
+                      className="p-1 text-gray-400 hover:text-rose-400 rounded transition-colors bg-transparent border-0 cursor-pointer disabled:opacity-50"
+                      title="Remove from group"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </>
                 )}
               </div>
             </div>

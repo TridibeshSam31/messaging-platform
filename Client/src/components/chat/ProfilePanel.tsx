@@ -1,8 +1,10 @@
-import { User as UserIcon, Film, Users } from "lucide-react"
+import { useState } from "react"
+import { User as UserIcon, Film, Users, Settings } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuthStore } from "@/stores/authStore"
 import { useChatStore } from "@/stores/chatStore"
 import { useAuth } from "@/hooks/useAuth"
+import { GroupSettings } from "@/components/group/GroupSettings"
 import type { Conversation } from "@/types"
 
 interface ProfilePanelProps {
@@ -13,6 +15,7 @@ export function ProfilePanel({ conversation }: ProfilePanelProps) {
   const { user } = useAuthStore()
   const { messages, onlineUsers } = useChatStore()
   const { handleLogout } = useAuth()
+  const [showGroupSettings, setShowGroupSettings] = useState(false)
 
   if (!conversation) {
     return (
@@ -61,21 +64,21 @@ export function ProfilePanel({ conversation }: ProfilePanelProps) {
   const displayName = isGroup
     ? (conversation.name ?? "Group Chat")
     : profileUser
-    ? profileUser.name
-    : (user?.name ?? "User")
+      ? profileUser.name
+      : (user?.name ?? "User")
 
   const isOnline = !!profileUser && onlineUsers.has(profileUser.id)
   const statusSubtitle = isGroup
     ? `${conversation.members.length} ${conversation.members.length === 1 ? "member" : "members"}`
     : isOnline
-    ? "Online"
-    : "Offline"
+      ? "Online"
+      : "Offline"
 
   const avatarUrl = isGroup
     ? (conversation.avatar ?? undefined)
     : profileUser
-    ? (profileUser.avatar ?? undefined)
-    : (user?.avatar ?? undefined)
+      ? (profileUser.avatar ?? undefined)
+      : (user?.avatar ?? undefined)
 
   const groupInitials = isGroup
     ? (conversation.name ? conversation.name.slice(0, 2).toUpperCase() : "GC")
@@ -119,7 +122,18 @@ export function ProfilePanel({ conversation }: ProfilePanelProps) {
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs font-semibold text-[#b0b8d4]">
               <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5 text-[#F59E0B]" />Members</span>
-              <span className="text-[11px] text-gray-400 font-normal">{members.length}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] text-gray-400 font-normal">{members.length}</span>
+                {conversation.members.some((m) => m.userId === user?.id && m.role === "ADMIN") && (
+                  <button
+                    onClick={() => setShowGroupSettings(true)}
+                    className="p-1 text-gray-400 hover:text-white rounded transition-colors bg-transparent border-0 cursor-pointer"
+                    title="Group Settings"
+                  >
+                    <Settings className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
             <div className="space-y-1.5 max-h-40 overflow-y-auto scrollbar-thin pr-0.5">
               {members.map((m) => {
@@ -187,6 +201,14 @@ export function ProfilePanel({ conversation }: ProfilePanelProps) {
           Logout
         </button>
       </div>
+
+      {isGroup && conversation && (
+        <GroupSettings
+          conversation={conversation}
+          open={showGroupSettings}
+          onClose={() => setShowGroupSettings(false)}
+        />
+      )}
     </aside>
   )
 }
