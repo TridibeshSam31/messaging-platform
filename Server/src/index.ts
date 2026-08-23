@@ -13,6 +13,7 @@ import uploadRoutes from "./routes/upload.routes.js";
 
 import { errorHandler } from "./middleware/errorHandler.js";
 import { limiter } from "./lib/rate-limit.js";
+import {log} from "./lib/logger.js"
 import dotenv from "dotenv"
 
 dotenv.config();
@@ -59,13 +60,16 @@ async function startServer() {
       data: { status: "OFFLINE" },
     });
 
-    // Initialize WebSocket Server (runs on its own port 8080)
-    initializeWebSocket();
+    
 
     // Start Express Server
     app.listen(PORT, () => {
       console.log(` Server running on port ${PORT}`);
     });
+
+    log("info", "server.started", {
+    port: PORT,
+   });
   } catch (error) {
     console.error("Failed to start server:", error);
     process.exit(1);

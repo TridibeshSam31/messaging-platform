@@ -33,6 +33,8 @@ import { handleChat } from "./handlers/chat.handler.js"
 import { handleRead } from "./handlers/read.handler.js"
 import { handleDelivered } from "./handlers/delivered.handler.js"
 import { prisma } from "../lib/prisma.js"
+import { log } from "../lib/logger.js"
+import { randomUUID } from "crypto"
 
 
 
@@ -41,6 +43,7 @@ import { prisma } from "../lib/prisma.js"
 
 export interface ClientData {
     userId: string
+    connectionId: string;
 }
 
 export const clients = new Map<WebSocket, ClientData>()
@@ -80,7 +83,7 @@ export function initializeWebSocket() {
                 ws.close()
                 return
             }
-
+             const connectionId = randomUUID();
             const decoded = verifyAccessToken(token)
 
             if (!decoded) {
@@ -90,8 +93,14 @@ export function initializeWebSocket() {
             //store the client
 
             clients.set(ws, {
-                userId: decoded.userId
+                userId: decoded.userId,
+                connectionId: crypto.randomUUID()
             })
+
+            log("info", "ws.connection.open", {
+            userId: decoded.userId,
+            connectionId,
+           });
 
             //online users
 
@@ -101,7 +110,7 @@ export function initializeWebSocket() {
 
             onlineUsers.get(decoded.userId)?.add(ws)
 
-            console.log(`${decoded.userId} connected`);
+            
 
             const isFirstSocket = onlineUsers.get(decoded.userId)!.size === 1
             if (isFirstSocket) {
@@ -265,7 +274,10 @@ export function initializeWebSocket() {
                             }
                         }
 
-                        console.log(`${client.userId} offline`)
+                       log("info", "ws.connection.close", {
+                        userId: client.userId,
+                        connectionId: client.connectionId,
+                        });
                     }
                 }
             })
