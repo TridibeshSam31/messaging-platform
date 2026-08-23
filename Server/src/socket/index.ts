@@ -24,7 +24,7 @@ Route Messages
 
 */
 
-import { createServer } from "http"
+import { Server } from "http"
 import { WebSocketServer, WebSocket } from "ws"
 import { verifyAccessToken } from "../lib/jwt.js"
 import { handlePresence } from "./handlers/presence.handler.js"
@@ -56,16 +56,16 @@ export const socketRooms = new Map<WebSocket, Set<string>>()
 
 //estamblishing connection
 
-export function initializeWebSocket() {
-    const httpServer = createServer()
-
+export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolean) {
     const wss = new WebSocketServer({
         server: httpServer
     })
 
+    /* phase 7 changes
     httpServer.listen(8080, () => {
         console.log("websocket server running on port 8080")
     })
+    */ 
 
     wss.on("connection", async (ws, req) => {
         //ws = socket object , or we can write socket also no problem
@@ -237,13 +237,18 @@ export function initializeWebSocket() {
                 //remove online user socket
 
                 const sockets = onlineUsers.get(client.userId)
-
+                
                 if (sockets) {
                     sockets.delete(ws)
 
                     if (sockets.size === 0) {
                         onlineUsers.delete(client.userId)
-
+                         
+                        //// During server shutdown:
+                        // don't perform per-user DB presence updates
+                        if (isShuttingDown()) {
+                        return
+                        }
                         // DB mein OFFLINE + lastseen update
                         await prisma.user.update({
                             where: { id: client.userId },
@@ -282,11 +287,15 @@ export function initializeWebSocket() {
                 }
             })
 
+           
+
         } catch (error) {
             ws.close()
 
         }
     })
+
+     return wss
 
 }
 
