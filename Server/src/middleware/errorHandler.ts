@@ -17,7 +17,20 @@ export class AppError extends Error {
 
 export const errorHandler = (err:any , req:Request , res:Response , next:NextFunction) => {
 
+  const requestId = (req as Request & { requestId?: string }).requestId
+
  console.error("Error caught in global handler",err)
+
+ console.error(JSON.stringify({
+        timestamp: new Date().toISOString(),
+        level: "error",
+        event: "http.request.error",
+        requestId,
+        method: req.method,
+        path: req.originalUrl,
+        error: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+    }))
 
  if(err instanceof AppError){
     return res.status(err.statusCode).json({error:err.message})

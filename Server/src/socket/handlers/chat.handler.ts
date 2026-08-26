@@ -10,8 +10,9 @@ Read receipt
 
 import { WebSocket } from "ws";
 import { clients, rooms } from "../index.js"
-import { prisma } from "../../lib/prisma.js";
+
 import { MessageHandlerClass } from "../../services/message.service.js";
+import { log } from "../../lib/logger.js";
 
 
 interface chatMessage {
@@ -32,6 +33,10 @@ export async function handleChat(ws: WebSocket, data: chatMessage) {
             message: "Unauthorized"
         }))
 
+        log("warn", "ws.chat.rejected", {
+        reason: "unauthorized",
+       })
+
         return
     }
 
@@ -44,6 +49,13 @@ export async function handleChat(ws: WebSocket, data: chatMessage) {
             type: "error",
             message: "Room not Found"
         }))
+
+        log("warn", "ws.chat.rejected", {
+       userId: sender.userId,
+       connectionId: sender.connectionId,
+       roomId: data.roomId,
+       reason: "room_not_found",
+     })
 
         return
     }

@@ -47,12 +47,16 @@ export function useAuth(){
     }
 
     const handleLogout = async () => {
-        try{
-            await authApi.logout()
-        }catch{
-          //ignoring the logout errors
-        }
+    try {
+        await authApi.logout()
+    } catch {
+        // Even if the server request fails,
+        // clear the local authentication state.
+    } finally {
+        logout()
+        navigate("/")
     }
+}
 
     return {
         handleLogout , handleLogin , handleSignup

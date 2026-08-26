@@ -81,23 +81,29 @@ export class AuthController{
     }
 
 
-    static async postRefresh(req:Request , res:Response , next:NextFunction){
-        try {
+    static async postRefresh(
+    req: Request,
+    res: Response,
+    next: NextFunction
+   ) {
+    try {
+        const token =
+            req.cookies?.refreshToken ||
+            req.body?.refreshToken;
 
-        const token = req.cookies.refreshToken || req.body.refreshToken;
         if (!token) {
-        return res.status(401).json({ error: "Refresh token required" });
+            return res.status(401).json({
+                error: "Refresh token required",
+            });
         }
 
         const result = await AuthService.refresh(token);
-        return res.status(200).json(result);
-            
-        } catch (error) {
 
-            next(error)
-            
-        }
+        return res.status(200).json(result);
+    } catch (error) {
+        next(error);
     }
+ } 
 
     static async Logout(req:Request , res:Response , next:NextFunction){
         res.clearCookie("refreshToken")

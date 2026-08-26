@@ -71,8 +71,8 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
 
     wss.on("connection", async (ws, req) => {
         //ws = socket object , or we can write socket also no problem
-
-        const connectionId = randomUUID();
+       const connectionId = randomUUID();
+        
         try {
             //jwt authentication
 
@@ -84,21 +84,29 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
             const token = url.searchParams.get("token")
 
             if (!token) {
+                log("warn", "ws.connection.rejected", {
+                connectionId,
+               reason: "missing_token",
+              })
                 ws.close()
                 return
             }
-             const connectionId = randomUUID();
+             
             const decoded = verifyAccessToken(token)
 
             if (!decoded) {
-                console.log("verification failed")
+
+                 log("warn", "ws.connection.rejected", {
+                 connectionId,
+                reason: "invalid_token",
+              })
             }
 
             //store the client
 
             clients.set(ws, {
                 userId: decoded.userId,
-                connectionId: crypto.randomUUID()
+                connectionId
             })
 
             
@@ -152,6 +160,12 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
                 try {
                     const msg = JSON.parse(raw.toString())
 
+                    log("info", "ws.message.received", {
+                    connectionId,
+                    userId: decoded.userId,
+                    messageType: msg.type,
+                    })
+
                     if (msg.type === "join_room") {
                         handlePresence(ws, msg)
                         return
@@ -177,12 +191,21 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
                         return
                     }
 
-                    ws.send(JSON.stringify({
-                        type: "error",
-                        message: "unknown message type"
-                    }))
+                    log("warn", "ws.message.rejected", {
+                     connectionId,
+                    userId: decoded.userId,
+                    messageType: msg.type,
+                    reason: "unknown_message_type",
+                    })
 
                 } catch (error) {
+                    log("warn", "ws.message.invalid", {
+                    connectionId,
+                    userId: decoded.userId,
+                   error: error instanceof Error
+                    ? error.message
+                    : String(error),
+                  })
                     ws.send(JSON.stringify({
                         type: "error",
                         message: "Invalid message"
@@ -192,6 +215,17 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
                 }
             })
 
+
+            ws.on("error", (error) => {
+            log("error", "ws.connection.error", {
+             connectionId,
+             userId: decoded.userId,
+             error: error instanceof Error
+             ? error.message
+             : String(error),
+            })
+})
+
             //disconnect
 
             ws.on("close", async () => {
@@ -200,6 +234,12 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
                 if (!client) {
                     return
                 }
+
+                log("info", "ws.connection.close", {
+               userId: client.userId,
+              connectionId: client.connectionId,
+             })
+
 
                 //remove from rooms
                 //socketRooms contain the users that have joined 
@@ -285,10 +325,7 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
                             }
                         }
 
-                       log("info", "ws.connection.close", {
-                        userId: client.userId,
-                        connectionId: client.connectionId,
-                        });
+                       
                     }
                 }
             })

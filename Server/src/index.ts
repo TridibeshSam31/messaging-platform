@@ -16,12 +16,13 @@ import { limiter } from "./lib/rate-limit.js";
 import {log} from "./lib/logger.js"
 import dotenv from "dotenv"
 import { createServer } from "http";
-
+import {requestLogger} from "./middleware/requestLogger.js"
 
 dotenv.config();
 
 
 const app = express();
+
 
 const server = createServer(app);
 
@@ -35,6 +36,8 @@ app.use(
 );
 
 app.use(express.json());
+
+app.use(requestLogger);
 
 app.use(cookieParser());
 
