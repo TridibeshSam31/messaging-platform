@@ -57,16 +57,18 @@ export type Conversation = {
 }
 
 export type ConversationMember = {
-    userId:string,
-    role:"ADMIN"|"MEMBER"
-    user:{
-        id:string,
-        name:string,
-        username:string,
-        avatar:string,
-        status:"ONLINE"|"OFFLINE"
-        lastSeen:string
-    }
+  userId: string
+  role: "ADMIN" | "MEMBER"
+  lastReadMessageId: string | null
+
+  user: {
+    id: string
+    name: string
+    username: string
+    avatar: string
+    status: "ONLINE" | "OFFLINE"
+    lastSeen: string
+  }
 }
 
 export type  UploadedFile = {

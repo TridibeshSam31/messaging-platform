@@ -55,7 +55,7 @@ export const onlineUsers = new Map<string, Set<WebSocket>>()
 export const socketRooms = new Map<WebSocket, Set<string>>()
 
 //estamblishing connection
-
+const instanceId = randomUUID(); 
 export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolean) {
     const wss = new WebSocketServer({
         server: httpServer
@@ -67,8 +67,12 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
     })
     */ 
 
+    
+
     wss.on("connection", async (ws, req) => {
         //ws = socket object , or we can write socket also no problem
+
+        const connectionId = randomUUID();
         try {
             //jwt authentication
 
@@ -97,9 +101,11 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
                 connectionId: crypto.randomUUID()
             })
 
-            log("info", "ws.connection.open", {
+            
+         log("info", "ws.connection.open", {
             userId: decoded.userId,
             connectionId,
+            instanceId,
            });
 
             //online users

@@ -18,7 +18,11 @@ type ChatStore = {
   updateLastMessage: (convId: string, msg: Message) => void
   setMessages: (convId: string, msgs: Message[], nextCursor: string | null) => void
   addOlderMessages: (convId: string, msgs: Message[], nextCursor: string | null) => void
-  addNewMessage: (msg: Message) => void
+  addNewMessage: (
+    msg: Message,
+    isIncoming: boolean,
+    isActiveConversation: boolean
+  ) => void
   editMessageInStore: (msg: Message) => void
   deleteMessageInStore: (convId: string, msgId: string) => void
   setTyping: (convId: string, userId: string, isTyping: boolean) => void
@@ -28,6 +32,7 @@ type ChatStore = {
   updateLastRead: (convId: string, userId: string, messageId: string) => void
   updateUserInStore: (updatedUser: Partial<User> & { id: string }) => void
   setReadReceiptsEnabled: (enabled: boolean) => void
+  
 }
 
 export const useChatStore = create<ChatStore>((set, get) => ({
@@ -101,16 +106,37 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     })
   },
 
-  addNewMessage: (msg) => {
-    const existing = get().messages[msg.conversationId] || []
-    if (existing.some((m) => m.id === msg.id)) return
-    set({
-      messages: {
-        ...get().messages,
-        [msg.conversationId]: [...existing, msg],
-      },
+  addNewMessage: (msg, isIncoming, isActiveConversation) => {
+    const state = get()
+    const existing = state.messages[msg.conversationId] || []
+
+    if (existing.some((m) => m.id === msg.id)) {
+        return
+    }
+
+    const conversations = state.conversations.map((c) => {
+        if (
+            c.id === msg.conversationId &&
+            isIncoming &&
+            !isActiveConversation
+        ) {
+            return {
+                ...c,
+                unreadCount: c.unreadCount + 1,
+            }
+        }
+
+        return c
     })
-  },
+
+    set({
+        messages: {
+            ...state.messages,
+            [msg.conversationId]: [...existing, msg],
+        },
+        conversations,
+    })
+},
 
   editMessageInStore: (updatedMsg) => {
     const existing = get().messages[updatedMsg.conversationId] || []

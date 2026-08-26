@@ -40,27 +40,54 @@ export function useSocketEvents() {
         // Broadcast to everyone else in the room when another member sends
         // a message (chat.handler.ts skips the sender's own socket here).
         case WS_EVENTS.CHAT: {
-          const message = withDefaults(msg.data as Message)
-          addNewMessage(message)
-          updateLastMessage(message.conversationId, message)
-          // Tell the sender their message arrived on this device, so their
-          // single tick becomes a double tick — see delivered.handler.ts.
-          if (message.senderId !== user.id) {
-            sendWS({ type: WS_EVENTS.DELIVERED, messageId: message.id })
-          }
-          break
-        }
+    const message = withDefaults(msg.data as Message)
+
+    const isIncoming = message.senderId !== user.id
+
+    const isActiveConversation =
+        useChatStore.getState().activeConversationId ===
+        message.conversationId
+
+    addNewMessage(
+        message,
+        isIncoming,
+        isActiveConversation
+    )
+
+    updateLastMessage(
+        message.conversationId,
+        message
+    )
+
+    if (isIncoming) {
+        sendWS({
+            type: WS_EVENTS.DELIVERED,
+            messageId: message.id,
+        })
+    }
+
+    break
+}
 
         // Sent only back to us, once our own WS `chat` send is persisted —
         // this is how our own sent message actually lands in our store,
         // since the `chat` broadcast above deliberately skips the sender.
-        case WS_EVENTS.MESSAGE_ACK: {
-          const message = withDefaults(msg.data as Message)
-          addNewMessage(message)
-          updateLastMessage(message.conversationId, message)
-          break
-        }
+       case WS_EVENTS.MESSAGE_ACK: {
+    const message = withDefaults(msg.data as Message)
 
+    addNewMessage(
+        message,
+        false,
+        true
+    )
+
+    updateLastMessage(
+        message.conversationId,
+        message
+    )
+
+    break
+}
         case WS_EVENTS.TYPING:
           setTyping(msg.roomId as string, msg.userId as string, true)
           break
