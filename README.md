@@ -2,7 +2,7 @@
 
 A real-time, one-to-one and group messaging platform built with **PostgreSQL + Prisma**, an **Express** REST API, a native **WebSocket (`ws`)** real-time layer, and a **React (Vite + TypeScript)** client styled with Tailwind/shadcn. The backend is organized around a strict layered architecture (routes → controllers → services → Prisma) so business logic stays fully decoupled from HTTP and transport concerns.
 
-> **Status: Backend and frontend are both wired end-to-end.** Auth, users, conversations, messages, read receipts, file uploads (Cloudinary), and the WebSocket real-time layer are implemented on the server. On the client, `App.tsx` now mounts a real router (session restore on load, protected `/chat` route), and the auth screens, chat window, group management, and profile UI are all live against real hooks and a real WebSocket connection — this was rebuilt from an empty-stub state over the course of this README's revisions. `npm run build` currently fails on two trivial unused-variable errors (not a real bug — see [Project Status](#project-status)), and a few group-management actions (rename, promote/demote, remove-a-specific-member) call the wrong endpoint or no endpoint at all. See [Project Status](#project-status) for the precise, verified list.
+> **Status: Backend and frontend are both wired end-to-end.** Auth, users, conversations, messages, read receipts, file uploads (Cloudinary), and the WebSocket real-time layer are implemented on the server, now unified with the Express API on a single HTTP+WS server/port (Phase 7, done ahead of the rest of the roadmap — see [Project Status](#project-status)). On the client, `App.tsx` mounts a real router (session restore on load, protected `/chat` route), and the auth screens, chat window, group management, and profile UI are all live against real hooks and a real WebSocket connection. Group management (rename, add, remove, promote/demote) is now fully wired to the correct endpoints. `npm run build` currently fails on three TypeScript errors: two trivial unused-variable lints and one real bug — `useMessages.ts` calls `chatStore.addNewMessage` with 1 argument where the store now requires 3. See [Project Status](#project-status) for the precise, verified list.
 
 ---
 
@@ -69,7 +69,7 @@ The frontend follows a parallel separation: a thin **API layer** (`src/api/*`) w
 | Read receipts | Per-user, per-message read tracking with unread-count computation for conversation lists |
 | File uploads | Multer (memory storage) with type/size validation, streamed straight to Cloudinary |
 | Error handling | Centralized error-handling middleware mapping Zod, Prisma, and custom application errors to HTTP status codes |
-| Client UI | Login/signup forms, a three-column chat shell (sidebar + chat window + profile panel), message bubbles with read receipts and a typing indicator, group creation/settings/member list, avatar upload and profile editing — see [Frontend Structure](#frontend-structure). Fully wired to the backend, with the group-management caveats in [Project Status](#project-status) |
+| Client UI | Login/signup forms, a three-column chat shell (sidebar + chat window + profile panel), message bubbles with read receipts and a typing indicator, group creation/settings/member list (rename, add, remove, promote/demote — all wired to the correct endpoints), avatar upload and profile editing — see [Frontend Structure](#frontend-structure) |
 
 ---
 
@@ -116,7 +116,7 @@ graph TB
         Middleware["Auth Middleware (JWT)"]
         Controllers["Controllers"]
         Services["Service Layer"]
-        WSServer["ws WebSocket Server (JWT-authenticated, port 8080)"]
+        WSServer["ws WebSocket Server (JWT-authenticated, shares HTTP port)"]
         Upload["Multer (memory) File Upload"]
     end
 
@@ -135,7 +135,7 @@ graph TB
     Upload --> Cloudinary
 ```
 
-> **Note:** `initializeWebSocket()` builds and binds its own internal HTTP server on port `8080`, entirely separate from the Express API's `app.listen(PORT)` — a deliberate split as of the current revision (`Server/src/index.ts` no longer creates a shared `http.createServer(app)` at all). Merging them back onto one port is tracked as open work in [Roadmap → Phase 7](#phase-7-single-http-websocket-server).
+> **Note:** As of [Roadmap → Phase 7](#phase-7-single-http-websocket-server) (done), `Server/src/index.ts` creates a single `http.createServer(app)` and passes that same `server` into `initializeWebSocket(server, ...)`, so Express and the `ws` server share one port (`PORT`, default `3000`) instead of running on two. Graceful shutdown (`SIGINT`/`SIGTERM`) closes WebSocket clients, then the HTTP server, then disconnects Prisma, in that order.
 
 ### Auth Flow
 
@@ -437,9 +437,9 @@ This section reflects the current, verified state of the codebase (confirmed via
 - Conversation controller/service/routes: create private/group, get all, get by id, rename (`PATCH /:id`), leave (`DELETE /:id`), add member (`POST /:id/members`), remove a specific member (`DELETE /:id/members/:userId`), change a member's role (`PATCH /:id/members/:userId/role`)
 - Message controller/service/routes: cursor-paginated fetch, send (with attachments), edit, soft-delete, read-receipt endpoint — mounted at bare `/api` so the controller's own `/conversations/:id/messages` and `/messages/:id` paths resolve correctly
 - File upload: Multer (memory storage, type/size validation) → Cloudinary via `streamifier`, wired into avatar, message-attachment, and standalone upload endpoints
-- Real-time layer: native `ws` WebSocket server (JWT-authenticated on connect) with `chat`, `typing`/`stop_typing`, `join_room`/`leave_room` (presence, server-side conversation-membership verification), `delivered`, and `read` handlers, backed by in-memory connection/room/presence maps, including sender-side `message_ack` on send. Runs its own internal HTTP server on port `8080`, separate from the Express API
+- Real-time layer: native `ws` WebSocket server (JWT-authenticated on connect) with `chat`, `typing`/`stop_typing`, `join_room`/`leave_room` (presence, server-side conversation-membership verification), `delivered`, and `read` handlers, backed by in-memory connection/room/presence maps, including sender-side `message_ack` on send. Attached to the same `http.Server` as the Express API (Phase 7) instead of binding its own port
 - Live presence broadcasting, live delivered/read receipts, per-socket rate limiting (see [Real-Time Messaging Flow](#real-time-messaging-flow) for detail)
-- Express app entry point (`index.ts`) wiring all REST routers together
+- Express app entry point (`index.ts`) wiring all REST routers together, plus coordinated graceful shutdown on `SIGINT`/`SIGTERM` (close WS clients → close HTTP server → disconnect Prisma)
 - Database seed script (`prisma/seed.ts`)
 
 **Frontend — implemented and wired up**
@@ -447,7 +447,7 @@ This section reflects the current, verified state of the codebase (confirmed via
 - Auth screens: `LoginForm` / `SignupForm` with React Hook Form + Zod validation, toast feedback via `sonner`
 - Chat UI: three-column `AppLayout` (sidebar / chat window / profile panel), `MessageList` + `MessageBubble` + `MessageInput`, `TypingIndicator`, `ReadReceipt`
 - Sidebar: searchable `ConversationList`, start-private-chat modal, logout, read-receipts toggle
-- Group management UI: create-group modal, group settings, member list (see gaps below — some of these actions don't call the right endpoint yet)
+- Group management UI: create-group modal, group settings, member list — rename (`GroupSettings.tsx`), add member, remove member, and promote/demote (`MemberList.tsx`) all call the matching `conversationApi` methods against the correct REST endpoints
 - Profile: profile modal, avatar upload (`react-dropzone`)
 - `Logo`: a custom "VEYRA" gold-heart SVG emblem, not a placeholder
 - State layer: `authStore`, `chatStore`, and `socketStore` (Zustand) all implemented
@@ -458,7 +458,10 @@ This section reflects the current, verified state of the codebase (confirmed via
 
 **Known gaps**
 
-- The WebSocket server and the Express API run on two separate ports (`PORT` and `8080`) rather than sharing one — see [Roadmap → Phase 7](#phase-7-single-http-websocket-server).
+- `npm run build` in `Client/` fails on 3 TypeScript errors (confirmed via a real `tsc -b && vite build` run):
+  - `src/components/group/GroupSettings.tsx` — unused `UserIcon` import
+  - `src/hooks/useAuth.ts` — unused `loading` variable
+  - `src/hooks/useMessages.ts:74` — calls `chatStore.addNewMessage(msg)` with 1 argument, but the store's `addNewMessage` signature now requires `(msg, isIncoming, isActiveConversation)`. The first two are trivial lint fixes; this one is a real type error introduced by a store signature change that this call site was never updated for — the attachment-send path is currently broken until it's fixed.
 - Attachment messages (sent via REST, since the WS `chat` handler is text-only) don't reach the other participant live — see [Roadmap → Phase 5](#phase-5-unified-message-pipeline).
 
 ---
@@ -731,19 +734,23 @@ instead of creating duplicates.
 
 ### Phase 7 — Single HTTP + WebSocket Server
 
-Currently the WebSocket server runs separately from the Express server.
+**Status: Done ✅**
 
-- [ ] Attach WebSocket server to the existing HTTP server
-- [ ] Share the same HTTP port
-- [ ] Centralize graceful shutdown
-- [ ] Avoid separate HTTP server creation inside the WebSocket module
+The WebSocket server previously ran on its own internal HTTP server (port `8080`), separate from Express (`PORT`). This phase merged them:
 
-**Target**
+- [x] Attach WebSocket server to the existing HTTP server
+- [x] Share the same HTTP port
+- [x] Centralize graceful shutdown
+- [x] Avoid separate HTTP server creation inside the WebSocket module
+
+**Current architecture**
 
 ```mermaid
 graph TD
     NP[Node Process] --> HS["HTTP Server<br/>Express + WS"]
 ```
+
+`Server/src/index.ts` creates one `http.createServer(app)` and passes it into `initializeWebSocket(server, () => isShuttingDown)`, which attaches a `WebSocketServer({ server })` instead of creating its own. See `Server/phase7.md` for the full writeup, including the graceful-shutdown sequencing (`ws.close()` on all clients → 5s force-`terminate()` timeout → `server.close()` → `prisma.$disconnect()`) and the `isShuttingDown` flag that skips per-connection presence writes during shutdown. This was done ahead of Phases 1–6 in implementation order, even though it's numbered 7; the numbering reflects the original planned order, not the order things were actually built in.
 
 ### Phase 8 — Docker & Distributed Local Environment
 
