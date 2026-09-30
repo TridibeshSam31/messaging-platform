@@ -84,10 +84,10 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
             const token = url.searchParams.get("token")
 
             if (!token) {
-                log("warn", "ws.connection.rejected", {
-                connectionId,
-               reason: "missing_token",
-              })
+                log.warn("ws.connection.rejected", {
+                 connectionId,
+                 reason: "missing_token",
+                });
                 ws.close()
                 return
             }
@@ -95,11 +95,10 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
             const decoded = verifyAccessToken(token)
 
             if (!decoded) {
-
-                 log("warn", "ws.connection.rejected", {
-                 connectionId,
-                reason: "invalid_token",
-              })
+           log.warn("ws.connection.rejected", {
+         connectionId,
+         reason: "invalid_token",
+           });
             }
 
             //store the client
@@ -110,11 +109,11 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
             })
 
             
-         log("info", "ws.connection.open", {
-            userId: decoded.userId,
-            connectionId,
-            instanceId,
-           });
+         log.info("ws.connection.open", {
+           userId: decoded.userId,
+         connectionId,
+        instanceId,
+        });
 
             //online users
 
@@ -160,11 +159,11 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
                 try {
                     const msg = JSON.parse(raw.toString())
 
-                    log("info", "ws.message.received", {
+                    log.info("ws.message.received", {
                     connectionId,
-                    userId: decoded.userId,
+                   userId: decoded.userId,
                     messageType: msg.type,
-                    })
+                  });
 
                     if (msg.type === "join_room") {
                         handlePresence(ws, msg)
@@ -191,21 +190,21 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
                         return
                     }
 
-                    log("warn", "ws.message.rejected", {
+                    log.warn("ws.message.rejected", {
                      connectionId,
-                    userId: decoded.userId,
+                     userId: decoded.userId,
                     messageType: msg.type,
-                    reason: "unknown_message_type",
-                    })
+                   reason: "unknown_message_type",
+                   });
 
                 } catch (error) {
-                    log("warn", "ws.message.invalid", {
-                    connectionId,
+                    log.warn("ws.message.invalid", {
+                     connectionId,
                     userId: decoded.userId,
-                   error: error instanceof Error
-                    ? error.message
-                    : String(error),
-                  })
+                    error: error instanceof Error
+                      ? error.message
+                     : String(error),
+                       });
                     ws.send(JSON.stringify({
                         type: "error",
                         message: "Invalid message"
@@ -217,13 +216,13 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
 
 
             ws.on("error", (error) => {
-            log("error", "ws.connection.error", {
-             connectionId,
-             userId: decoded.userId,
-             error: error instanceof Error
-             ? error.message
-             : String(error),
-            })
+            log.error("ws.connection.error", {
+    connectionId,
+    userId: decoded.userId,
+    error: error instanceof Error
+        ? error.message
+        : String(error),
+});
 })
 
             //disconnect
@@ -235,10 +234,10 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
                     return
                 }
 
-                log("info", "ws.connection.close", {
-               userId: client.userId,
-              connectionId: client.connectionId,
-             })
+                log.info("ws.connection.close", {
+    userId: client.userId,
+    connectionId: client.connectionId,
+});
 
 
                 //remove from rooms

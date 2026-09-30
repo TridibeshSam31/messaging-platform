@@ -63,7 +63,7 @@ async function startServer() {
   try {
     // Connect to PostgreSQL
     await prisma.$connect();
-    log("info", "database.connected");
+    log.info("database.connected");
 
     // Reset any stale presence statuses left from previous server runs
     await prisma.user.updateMany({
@@ -74,14 +74,18 @@ async function startServer() {
 
     // Start Express+websocket server Server
     server.listen(PORT, () => {
-    log("info", "server.started", {
-        port: PORT,
-    });
+    log.info("server.started", {
+    port: PORT,
+});
     });
 
     ;
   } catch (error) {
-    log("error", "server.start.failed", { error });
+    log.error("server.start.failed", {
+    error: error instanceof Error
+        ? error.message
+        : String(error),
+    });
     process.exit(1);
   }
 }
@@ -102,8 +106,7 @@ async function shutdown() {
 
     isShuttingDown = true;
 
-    console.log("Shutting down server...");
-
+    log.info("server.shutdown.started");
     // Ask all WebSocket clients to close gracefully
     for (const ws of clients.keys()) {
         ws.close();
@@ -124,7 +127,7 @@ async function shutdown() {
 
         await prisma.$disconnect();
 
-        console.log("Server shut down cleanly");
+       log.info("server.shutdown.completed");
 
         process.exit(0);
     });

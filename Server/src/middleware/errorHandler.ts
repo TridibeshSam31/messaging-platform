@@ -1,7 +1,7 @@
-
 import {Request , Response , NextFunction} from "express"
 import {ZodError} from "zod"
 import {Prisma} from "@prisma/client"
+import { log } from "../lib/logger.js"
 
 //custom class to throw HTTP error codes
 
@@ -19,18 +19,13 @@ export const errorHandler = (err:any , req:Request , res:Response , next:NextFun
 
   const requestId = (req as Request & { requestId?: string }).requestId
 
- console.error("Error caught in global handler",err)
-
- console.error(JSON.stringify({
-        timestamp: new Date().toISOString(),
-        level: "error",
-        event: "http.request.error",
+ log.error("http.request.error", {
         requestId,
         method: req.method,
         path: req.originalUrl,
         error: err instanceof Error ? err.message : String(err),
         stack: err instanceof Error ? err.stack : undefined,
-    }))
+    })
 
  if(err instanceof AppError){
     return res.status(err.statusCode).json({error:err.message})
@@ -86,7 +81,7 @@ export const errorHandler = (err:any , req:Request , res:Response , next:NextFun
   });
 
   /*
-  
+
   
   {
   error: "Internal Server Error",
@@ -101,5 +96,3 @@ export const errorHandler = (err:any , req:Request , res:Response , next:NextFun
   
 
 }
-
-

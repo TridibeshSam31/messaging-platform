@@ -33,10 +33,9 @@ export async function handleChat(ws: WebSocket, data: chatMessage) {
             message: "Unauthorized"
         }))
 
-        log("warn", "ws.chat.rejected", {
+        log.warn("ws.chat.rejected", {
         reason: "unauthorized",
-       })
-
+     })
         return
     }
 
@@ -50,12 +49,12 @@ export async function handleChat(ws: WebSocket, data: chatMessage) {
             message: "Room not Found"
         }))
 
-        log("warn", "ws.chat.rejected", {
-       userId: sender.userId,
-       connectionId: sender.connectionId,
-       roomId: data.roomId,
-       reason: "room_not_found",
-     })
+        log.warn("ws.chat.rejected", {
+    userId: sender.userId,
+    connectionId: sender.connectionId,
+    roomId: data.roomId,
+    reason: "room_not_found",
+    })
 
         return
     }
@@ -67,6 +66,15 @@ export async function handleChat(ws: WebSocket, data: chatMessage) {
         { type: "TEXT", content: data.message }
     );
 
+    log.info("ws.chat.sent", {
+    userId: sender.userId,
+    connectionId: sender.connectionId,
+    roomId: data.roomId,
+    messageId: chatMessage.id,
+    } );
+    
+    const recipientCount = [...sockets].filter((socket) => socket !== ws).length;
+
     for (const socket of sockets) {
         if (socket === ws) continue;
         socket.send(JSON.stringify({
@@ -75,6 +83,14 @@ export async function handleChat(ws: WebSocket, data: chatMessage) {
         }));
     }
 
+    log.info("ws.chat.broadcast", {
+    userId: sender.userId,
+    connectionId: sender.connectionId,
+    roomId: data.roomId,
+    messageId: chatMessage.id,
+    recipientCount,
+    });
+ 
     ws.send(JSON.stringify({
         type: "message_ack",
         messageId: chatMessage.id,
