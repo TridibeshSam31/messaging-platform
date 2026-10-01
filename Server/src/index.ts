@@ -78,6 +78,26 @@ app.get("/metrics", (req, res) => {
   });
 });
 
+app.get("/health", async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1` //check if the database is reachable and responsive
+
+    res.status(200).json({
+      status: "healthy",
+      server: "healthy",
+      database: "healthy",
+      timestamp: new Date().toISOString(),
+    })
+  } catch (error) {
+    res.status(503).json({
+      status: "unhealthy",
+      server: "healthy",
+      database: "unhealthy",
+      timestamp: new Date().toISOString(),
+    })
+  }
+})
+
 app.use(limiter)
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
