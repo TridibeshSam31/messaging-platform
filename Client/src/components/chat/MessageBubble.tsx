@@ -217,25 +217,23 @@ export function MessageBubble({
     }
 
     /*
-     * Read = double black tick.
+     * Read = double sky-blue tick.
      */
     if (isRead) {
       return (
         <CheckCheck
-          className="h-3.5 w-3.5 text-gray-900"
+          className="h-3.5 w-3.5 text-sky-400"
         />
       )
     }
 
     /*
      * Delivered but not read = SINGLE grey tick
-     *
-     * This is the behavior you asked for.
      */
     if (isDelivered) {
       return (
         <Check
-          className="h-3.5 w-3.5 text-gray-400"
+          className="h-3.5 w-3.5 text-[#8892c0]"
         />
       )
     }
@@ -245,7 +243,7 @@ export function MessageBubble({
      */
     return (
       <Check
-        className="h-3.5 w-3.5 text-gray-400"
+        className="h-3.5 w-3.5 text-[#62688f]"
       />
     )
   }
@@ -260,7 +258,7 @@ export function MessageBubble({
         {!isOwn && (
           <div className="w-7 shrink-0 self-end mb-1 select-none">
             {showAvatar ? (
-              <Avatar className="h-7 w-7 border border-white/15 bg-purple-950">
+              <Avatar className="h-7 w-7 border border-white/15 bg-[#1c1f38]">
                 <AvatarImage
                   src={
                     message.sender.avatar ??
@@ -269,7 +267,7 @@ export function MessageBubble({
                   className="object-cover"
                 />
 
-                <AvatarFallback className="text-[10px] font-semibold bg-purple-900 text-white">
+                <AvatarFallback className="text-[10px] font-bold bg-[#1c1f38] text-[#F59E0B]">
                   {message.sender.name
                     .slice(0, 2)
                     .toUpperCase()}
@@ -290,12 +288,12 @@ export function MessageBubble({
             <div
               className={`
                 rounded-2xl px-4 py-2.5 text-sm
-                leading-relaxed tracking-wide shadow-sm
+                leading-relaxed tracking-wide shadow-sm transition-all
 
                 ${
                   isOwn
-                    ? "bg-[#7C3AED] text-white rounded-br-xs shadow-purple-900/20"
-                    : "bg-[#181628]/90 border border-white/10 text-white rounded-bl-xs"
+                    ? "bg-[#21264e] border border-[#3b4388]/60 text-white rounded-br-xs shadow-md"
+                    : "bg-[#131528]/95 border border-white/[0.08] text-[#e2e8f0] rounded-bl-xs"
                 }
 
                 ${isDeleted ? "opacity-50 italic" : ""}

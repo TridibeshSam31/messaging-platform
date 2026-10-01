@@ -30,13 +30,15 @@ export function TypingIndicator({ conversationId }: Props) {
       : "Several people are typing..."
 
   return (
-    <div className="flex items-center gap-2 px-5 py-1 shrink-0 bg-transparent select-none">
-      <div className="flex gap-1 items-center">
-        <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce3" style={{ animationDelay: "0ms" }} />
-        <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce3" style={{ animationDelay: "150ms" }} />
-        <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce3" style={{ animationDelay: "300ms" }} />
+    <div className="flex items-center gap-2 px-5 py-1 shrink-0 bg-transparent select-none animate-in fade-in duration-200">
+      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/[0.04] border border-white/[0.08]">
+        <div className="flex gap-1 items-center">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] animate-bounce3" style={{ animationDelay: "0ms" }} />
+          <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] animate-bounce3" style={{ animationDelay: "150ms" }} />
+          <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] animate-bounce3" style={{ animationDelay: "300ms" }} />
+        </div>
+        <span className="text-[10px] text-[#8892c0] font-medium">{label}</span>
       </div>
-      <span className="text-[11px] text-gray-400 font-medium italic">{label}</span>
     </div>
   )
 }

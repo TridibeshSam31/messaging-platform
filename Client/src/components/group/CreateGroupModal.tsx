@@ -88,10 +88,10 @@ export function CreateGroupModal({ open, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
-      <DialogContent className="sm:max-w-md bg-[#12111C] border border-white/15 text-white">
+      <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[88vh] overflow-y-auto scrollbar-thin bg-[#12111C] border border-white/15 text-white p-5">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
-            <Users className="h-5 w-5 text-purple-400" />
+            <Users className="h-5 w-5 text-[#F59E0B]" />
             New Group
           </DialogTitle>
         </DialogHeader>
@@ -112,7 +112,7 @@ export function CreateGroupModal({ open, onClose }: Props) {
                     setStep("members")
                   }
                 }}
-                className="w-full px-4 py-2.5 bg-[#181624] border border-white/15 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-[#6D4AFF] text-sm"
+                className="w-full px-4 py-2.5 bg-[#181624] border border-white/15 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-[#F59E0B]/60 text-sm"
                 autoFocus
               />
             </div>
@@ -121,7 +121,7 @@ export function CreateGroupModal({ open, onClose }: Props) {
                 Cancel
               </Button>
               <Button
-                className="flex-1 bg-[#6D4AFF] hover:bg-[#5B3CC4] text-white border-0"
+                className="flex-1 bg-gradient-to-r from-[#D97706] to-[#F59E0B] text-black font-bold shadow-md shadow-amber-950/30 hover:opacity-90 border-0"
                 disabled={groupName.trim().length < 3}
                 onClick={() => setStep("members")}
               >
@@ -142,11 +142,11 @@ export function CreateGroupModal({ open, onClose }: Props) {
                   {selected.map((u) => (
                     <Badge
                       key={u.id}
-                      className="flex items-center gap-1.5 pr-1 pl-1 bg-purple-950/80 border border-purple-500/30 text-white rounded-full select-none py-0.5"
+                      className="flex items-center gap-1.5 pr-1 pl-1 bg-[#1a1c36] border border-amber-500/30 text-white rounded-full select-none py-0.5"
                     >
                       <Avatar className="h-5 w-5 shrink-0">
                         <AvatarImage src={u.avatar ?? undefined} />
-                        <AvatarFallback className="text-[8px] font-semibold bg-purple-900">
+                        <AvatarFallback className="text-[8px] font-bold bg-[#23274c] text-[#F59E0B]">
                           {u.name.slice(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
@@ -170,7 +170,7 @@ export function CreateGroupModal({ open, onClose }: Props) {
                   placeholder="Search user by name or username..."
                   value={query}
                   onChange={(e) => search(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2.5 bg-[#181624] border border-white/15 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-[#6D4AFF] text-sm"
+                  className="w-full pl-9 pr-4 py-2.5 bg-[#181624] border border-white/15 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-[#F59E0B]/60 text-sm"
                   autoFocus
                 />
               </div>
@@ -184,12 +184,12 @@ export function CreateGroupModal({ open, onClose }: Props) {
                       <button
                         key={u.id}
                         onClick={() => toggleMember(u)}
-                        className={`w-full flex items-center justify-between px-3.5 py-2.5 hover:bg-purple-900/30 transition-colors text-left border-0 cursor-pointer text-white ${isSelected ? "bg-purple-900/20" : ""}`}
+                        className={`w-full flex items-center justify-between px-3.5 py-2.5 hover:bg-white/[0.04] transition-colors text-left border-0 cursor-pointer text-white ${isSelected ? "bg-amber-500/10" : ""}`}
                       >
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-7 w-7 shrink-0 border border-white/15 bg-purple-950">
+                          <Avatar className="h-7 w-7 shrink-0 border border-white/15 bg-[#1e2140]">
                             <AvatarImage src={u.avatar ?? undefined} className="object-cover" />
-                            <AvatarFallback className="text-xs font-semibold bg-purple-900 text-white">
+                            <AvatarFallback className="text-xs font-bold bg-[#1e2140] text-[#F59E0B]">
                               {u.name.slice(0, 2).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
@@ -199,7 +199,7 @@ export function CreateGroupModal({ open, onClose }: Props) {
                           </div>
                         </div>
                         {isSelected && (
-                          <span className="h-2 w-2 rounded-full bg-purple-400 mr-1" />
+                          <span className="h-2 w-2 rounded-full bg-[#F59E0B] mr-1" />
                         )}
                       </button>
                     )
@@ -218,7 +218,7 @@ export function CreateGroupModal({ open, onClose }: Props) {
               </Button>
               <Button
                 id="group-create-btn"
-                className="flex-1 bg-[#6D4AFF] hover:bg-[#5B3CC4] text-white border-0"
+                className="flex-1 bg-gradient-to-r from-[#D97706] to-[#F59E0B] text-black font-bold shadow-md shadow-amber-950/30 hover:opacity-90 border-0"
                 onClick={handleCreate}
                 disabled={creating || selected.length === 0}
               >

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Trash2, UserPlus, ShieldCheck, ShieldOff, User as UserIcon } from "lucide-react"
+import { Trash2, UserPlus, ShieldCheck, ShieldOff } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -26,7 +26,10 @@ export function MemberList({ conversation, onAddMemberClick }: Props) {
     setLoadingId(member.userId)
     try {
       await conversationApi.removeMember(conversation.id, member.userId)
-      addOrUpdateConversation({ ...conversation, members: conversation.members.filter(m => m.userId !== member.userId) })
+      addOrUpdateConversation({
+        ...conversation,
+        members: conversation.members.filter((m) => m.userId !== member.userId),
+      })
       toast.success(`${member.user.name} removed from group`)
     } catch {
       toast.error("Failed to remove member")
@@ -42,7 +45,7 @@ export function MemberList({ conversation, onAddMemberClick }: Props) {
       await conversationApi.updateRole(conversation.id, member.userId, newRole)
       addOrUpdateConversation({
         ...conversation,
-        members: conversation.members.map(m =>
+        members: conversation.members.map((m) =>
           m.userId === member.userId ? { ...m, role: newRole } : m
         ),
       })
@@ -55,7 +58,7 @@ export function MemberList({ conversation, onAddMemberClick }: Props) {
   }
 
   return (
-    <div className="space-y-3 select-none">
+    <div className="space-y-2.5 select-none w-full">
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
           Members ({conversation.members.length})
@@ -65,10 +68,10 @@ export function MemberList({ conversation, onAddMemberClick }: Props) {
             size="sm"
             variant="ghost"
             onClick={onAddMemberClick}
-            className="h-7 text-xs text-purple-400 hover:text-purple-300 hover:bg-purple-950/40 px-2 flex items-center gap-1"
+            className="h-7 text-xs text-[#F59E0B] hover:text-[#FBBF24] hover:bg-amber-500/10 px-2.5 flex items-center gap-1 rounded-lg"
           >
             <UserPlus className="h-3.5 w-3.5" />
-            Add
+            Add Member
           </Button>
         )}
       </div>
@@ -81,42 +84,51 @@ export function MemberList({ conversation, onAddMemberClick }: Props) {
           return (
             <div
               key={m.userId}
-              className="flex items-center justify-between p-2 rounded-lg hover:bg-white/[0.04] transition-colors"
+              className="flex items-center justify-between p-2 rounded-xl hover:bg-white/[0.04] transition-colors gap-2"
             >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <Avatar className="h-7 w-7 border-0 bg-[#a3a6b4] shrink-0">
+              {/* User info */}
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <Avatar className="h-8 w-8 border-0 bg-[#1e2140] shrink-0">
                   <AvatarImage src={m.user.avatar ?? undefined} className="object-cover" />
-                  <AvatarFallback className="bg-[#a3a6b4] text-white flex items-center justify-center">
-                    <UserIcon className="h-4 w-4 text-white" />
+                  <AvatarFallback className="bg-[#1e2140] text-[#F59E0B] font-bold text-xs flex items-center justify-center">
+                    {m.user.name.slice(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <div className="min-w-0">
-                  <p className="text-xs font-medium text-white truncate flex items-center gap-1">
-                    {m.user.name}
-                    {isSelf && <span className="text-[10px] text-gray-400">(You)</span>}
+                <div className="min-w-0 flex-1">
+                  <p
+                    className="text-xs font-medium text-white truncate flex items-center gap-1.5"
+                    title={m.user.name}
+                  >
+                    <span className="truncate">{m.user.name}</span>
+                    {isSelf && (
+                      <span className="text-[10px] text-[#F59E0B] shrink-0 font-normal">
+                        (You)
+                      </span>
+                    )}
                   </p>
                   <p className="text-[10px] text-gray-400 truncate">@{m.user.username}</p>
                 </div>
               </div>
 
+              {/* Badges & Actions */}
               <div className="flex items-center gap-1 shrink-0">
                 <Badge
                   variant={isMemberAdmin ? "default" : "secondary"}
-                  className={`text-[9px] px-1.5 py-0.2 rounded-full font-semibold ${
+                  className={`text-[9px] px-2 py-0.5 rounded-full font-semibold shrink-0 ${
                     isMemberAdmin
-                      ? "bg-purple-900/80 text-purple-300 border border-purple-500/30"
-                      : "bg-white/10 text-gray-400"
+                      ? "bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/30"
+                      : "bg-white/10 text-gray-400 border border-transparent"
                   }`}
                 >
                   {m.role}
                 </Badge>
 
                 {isAdmin && !isSelf && (
-                  <>
+                  <div className="flex items-center gap-0.5">
                     <button
                       onClick={() => handleToggleRole(m)}
                       disabled={loadingId === m.userId}
-                      className="p-1 text-gray-400 hover:text-purple-400 rounded transition-colors bg-transparent border-0 cursor-pointer disabled:opacity-50"
+                      className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-[#F59E0B] hover:bg-white/10 rounded-lg transition-colors bg-transparent border-0 cursor-pointer disabled:opacity-50"
                       title={isMemberAdmin ? "Demote to member" : "Promote to admin"}
                     >
                       {isMemberAdmin ? (
@@ -128,12 +140,12 @@ export function MemberList({ conversation, onAddMemberClick }: Props) {
                     <button
                       onClick={() => handleRemove(m)}
                       disabled={loadingId === m.userId}
-                      className="p-1 text-gray-400 hover:text-rose-400 rounded transition-colors bg-transparent border-0 cursor-pointer disabled:opacity-50"
+                      className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-rose-400 hover:bg-rose-950/40 rounded-lg transition-colors bg-transparent border-0 cursor-pointer disabled:opacity-50"
                       title="Remove from group"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
-                  </>
+                  </div>
                 )}
               </div>
             </div>

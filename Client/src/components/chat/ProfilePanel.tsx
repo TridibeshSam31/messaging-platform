@@ -196,10 +196,10 @@ export function ProfilePanel({ conversation }: ProfilePanelProps) {
         </div>
       </div>
 
-      <div className="px-4 pb-4 pt-2 shrink-0">
-        <button onClick={handleLogout} className="veyra-btn-logout">
-          Logout
-        </button>
+      <div className="px-4 pb-4 pt-2 shrink-0 border-t border-white/[0.06]">
+        <div className="flex items-center justify-center gap-1.5 text-[11px] text-[#6b7099]">
+          <span>Protected by Veyra end-to-end messaging</span>
+        </div>
       </div>
 
       {isGroup && conversation && (

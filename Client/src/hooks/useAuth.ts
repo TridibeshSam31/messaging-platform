@@ -59,8 +59,9 @@ export function useAuth(){
 }
 
     return {
-        handleLogout , handleLogin , handleSignup
-
-
+        handleLogout,
+        handleLogin,
+        handleSignup,
+        loading
     }
 }

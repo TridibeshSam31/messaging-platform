@@ -63,10 +63,10 @@ export function ProfileModal({ open, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
-      <DialogContent className="sm:max-w-md bg-[#12111C] border border-white/15 text-white">
+      <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[88vh] overflow-y-auto scrollbar-thin bg-[#12111C] border border-white/15 text-white p-5">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
-            <User className="h-5 w-5 text-purple-400" />
+            <User className="h-5 w-5 text-[#F59E0B]" />
             Edit Profile
           </DialogTitle>
         </DialogHeader>
@@ -82,7 +82,7 @@ export function ProfileModal({ open, onClose }: Props) {
                   id="profile-name"
                   placeholder="Your Name"
                   {...register("name")}
-                  className="w-full px-4 py-2.5 bg-[#181624] border border-white/15 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-[#6D4AFF] text-sm"
+                  className="w-full px-4 py-2.5 bg-[#181624] border border-white/15 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-[#F59E0B]/60 text-sm"
                 />
                 {errors.name && (
                   <p className="text-xs text-rose-400">{errors.name.message}</p>
@@ -95,7 +95,7 @@ export function ProfileModal({ open, onClose }: Props) {
                   id="profile-username"
                   placeholder="username"
                   {...register("username")}
-                  className="w-full px-4 py-2.5 bg-[#181624] border border-white/15 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-[#6D4AFF] text-sm"
+                  className="w-full px-4 py-2.5 bg-[#181624] border border-white/15 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-[#F59E0B]/60 text-sm"
                 />
                 {errors.username && (
                   <p className="text-xs text-rose-400">{errors.username.message}</p>
@@ -106,7 +106,7 @@ export function ProfileModal({ open, onClose }: Props) {
                 <Button type="button" variant="outline" onClick={onClose} disabled={saving} className="flex-1 bg-transparent border-white/15 text-white hover:bg-white/10">
                   Cancel
                 </Button>
-                <Button type="submit" disabled={saving} className="flex-1 bg-[#6D4AFF] hover:bg-[#5B3CC4] text-white border-0">
+                <Button type="submit" disabled={saving} className="flex-1 bg-gradient-to-r from-[#D97706] to-[#F59E0B] text-black font-bold shadow-md shadow-amber-950/30 hover:opacity-90 border-0">
                   {saving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

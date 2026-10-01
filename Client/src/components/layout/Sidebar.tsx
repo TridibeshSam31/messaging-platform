@@ -15,11 +15,12 @@ import { useChatStore } from "@/stores/chatStore"
 import { useAuth } from "@/hooks/useAuth"
 import { ConversationList } from "@/components/chat/ConversationList"
 import { CreateGroupModal } from "@/components/group/CreateGroupModal"
-import { StartPrivateChatModal } from "@/components/chat/StartPrivateChatModel"
+import { StartPrivateChatModal } from "@/components/chat/StartPrivateChatModal"
 import { ProfileModal } from "@/components/profile/ProfileModal"
 
 export function Sidebar() {
   const [search, setSearch] = useState("")
+  const [filter, setFilter] = useState<"ALL" | "DIRECT" | "GROUP">("ALL")
   const [showGroupModal, setShowGroupModal] = useState(false)
   const [showChatModal, setShowChatModal] = useState(false)
   const [showProfileModal, setShowProfileModal] = useState(false)
@@ -28,6 +29,8 @@ export function Sidebar() {
   const { handleLogout } = useAuth()
 
   const filtered = conversations.filter((conv) => {
+    if (filter === "DIRECT" && conv.type !== "PRIVATE") return false
+    if (filter === "GROUP" && conv.type !== "GROUP") return false
     const other = conv.members.find((m) => m.userId !== user?.id)
     const label = conv.type === "GROUP" ? (conv.name ?? "") : (other?.user.name ?? "")
     return label.toLowerCase().includes(search.toLowerCase())
@@ -66,17 +69,54 @@ export function Sidebar() {
           </div>
 
           {/* Search bar */}
-          <div className="px-3 pb-2.5 shrink-0">
+          <div className="px-3 pb-2 shrink-0">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-[#6b7099] pointer-events-none" />
               <input
                 id="sidebar-search"
-                placeholder="Search User..."
+                placeholder="Search conversations..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-7 pr-3 py-1.5 text-[11px] bg-[#13152a]/90 border border-white/[0.08] rounded-full text-white placeholder:text-[#6b7099] focus:outline-none focus:border-[#F59E0B]/50 transition-all"
               />
             </div>
+          </div>
+
+          {/* Filter tabs */}
+          <div className="flex items-center gap-1.5 px-3 pb-2.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => setFilter("ALL")}
+              className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold transition-all border-0 cursor-pointer ${
+                filter === "ALL"
+                  ? "bg-[#F59E0B]/20 text-[#F59E0B]"
+                  : "bg-white/[0.04] text-[#8892c0] hover:text-white hover:bg-white/[0.08]"
+              }`}
+            >
+              All
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilter("DIRECT")}
+              className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold transition-all border-0 cursor-pointer ${
+                filter === "DIRECT"
+                  ? "bg-[#F59E0B]/20 text-[#F59E0B]"
+                  : "bg-white/[0.04] text-[#8892c0] hover:text-white hover:bg-white/[0.08]"
+              }`}
+            >
+              Direct
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilter("GROUP")}
+              className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold transition-all border-0 cursor-pointer ${
+                filter === "GROUP"
+                  ? "bg-[#F59E0B]/20 text-[#F59E0B]"
+                  : "bg-white/[0.04] text-[#8892c0] hover:text-white hover:bg-white/[0.08]"
+              }`}
+            >
+              Groups
+            </button>
           </div>
 
           {/* Conversation list */}

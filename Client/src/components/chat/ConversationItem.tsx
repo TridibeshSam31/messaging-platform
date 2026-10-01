@@ -61,13 +61,18 @@ export function ConversationItem({ conversation, isActive, onClick }: Props) {
     <div
       onClick={onClick}
       className={`
-        w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg my-px
-        transition-all duration-100 cursor-pointer select-none group relative
+        w-full flex items-center gap-2.5 px-2.5 py-2.5 rounded-xl my-0.5
+        transition-all duration-150 cursor-pointer select-none group relative
         ${isActive
-          ? "bg-[#1e2140] border border-[#353860]/80 text-white"
+          ? "bg-[#161832] border border-[#F59E0B]/30 text-white shadow-sm"
           : "bg-transparent border border-transparent text-[#b0b8d4] hover:bg-white/[0.04] hover:text-white"}
       `}
     >
+      {/* Active accent pill */}
+      {isActive && (
+        <span className="absolute left-0 top-2.5 bottom-2.5 w-1 bg-[#F59E0B] rounded-r-full shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
+      )}
+
       {/* Avatar */}
       <div className="relative shrink-0">
         {isGroup ? (
@@ -75,12 +80,17 @@ export function ConversationItem({ conversation, isActive, onClick }: Props) {
             {groupInitials}
           </div>
         ) : (
-          <Avatar className="h-9 w-9 border-0 bg-[#2c2f50] shrink-0">
-            <AvatarImage src={avatarSrc} className="object-cover" />
-            <AvatarFallback className="bg-[#2c2f50] text-[#8892c0] text-[10px] font-bold flex items-center justify-center">
-              {other?.user.name ? other.user.name.slice(0, 2).toUpperCase() : <UserIcon className="h-4 w-4" />}
-            </AvatarFallback>
-          </Avatar>
+          <div className="relative">
+            <Avatar className="h-9 w-9 border-0 bg-[#2c2f50] shrink-0">
+              <AvatarImage src={avatarSrc} className="object-cover" />
+              <AvatarFallback className="bg-[#2c2f50] text-[#8892c0] text-[10px] font-bold flex items-center justify-center">
+                {other?.user.name ? other.user.name.slice(0, 2).toUpperCase() : <UserIcon className="h-4 w-4" />}
+              </AvatarFallback>
+            </Avatar>
+            {isOnline && (
+              <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-[#0c0d1b]" />
+            )}
+          </div>
         )}
       </div>
 

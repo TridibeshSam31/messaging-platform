@@ -277,18 +277,18 @@ export function MessageList({ conversationId }: Props) {
 
         {loadingOld && (
           <div className="flex justify-center py-3">
-            <Loader2 className="h-4 w-4 animate-spin text-purple-400" />
+            <Loader2 className="h-4 w-4 animate-spin text-[#F59E0B]" />
           </div>
         )}
 
         {convMessages.length === 0 && !loadingOld && (
-          <div className="flex flex-col items-center justify-center h-full py-20 text-gray-400 select-none">
-            <p className="text-sm font-medium text-gray-300">
+          <div className="flex flex-col items-center justify-center h-full py-20 text-[#8892c0] select-none">
+            <p className="text-sm font-semibold text-white">
               No messages yet
             </p>
 
-            <p className="text-xs text-gray-500 mt-0.5">
-              Send a message to start the conversation.
+            <p className="text-xs text-[#8892c0] mt-1">
+              Say hello to start the conversation.
             </p>
           </div>
         )}
@@ -342,9 +342,9 @@ export function MessageList({ conversationId }: Props) {
       {newMessagesCount > 0 && (
         <button
           onClick={scrollToBottom}
-          className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-xs font-semibold px-4 py-2 rounded-full shadow-xl flex items-center gap-1.5 transition-all duration-200 cursor-pointer animate-bounce border border-purple-400/30"
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-[#161830]/95 hover:bg-[#202344] text-white text-xs font-semibold px-4 py-2 rounded-full shadow-2xl flex items-center gap-1.5 transition-all duration-200 cursor-pointer border border-[#F59E0B]/40 backdrop-blur-md hover:scale-105 active:scale-95"
         >
-          <ArrowDown className="h-3.5 w-3.5" />
+          <ArrowDown className="h-3.5 w-3.5 text-[#F59E0B]" />
 
           {newMessagesCount}{" "}
           {newMessagesCount === 1

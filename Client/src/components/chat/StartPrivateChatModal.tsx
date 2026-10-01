@@ -69,10 +69,10 @@ export function StartPrivateChatModal({ open, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
-      <DialogContent className="sm:max-w-md bg-[#12111C] border border-white/15 text-white">
+      <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[88vh] overflow-y-auto scrollbar-thin bg-[#12111C] border border-white/15 text-white p-5">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
-            <UserPlus className="h-5 w-5 text-purple-400" />
+            <UserPlus className="h-5 w-5 text-[#F59E0B]" />
             New Conversation
           </DialogTitle>
         </DialogHeader>
@@ -85,7 +85,7 @@ export function StartPrivateChatModal({ open, onClose }: Props) {
               placeholder="Search user by name or username..."
               value={query}
               onChange={(e) => search(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 bg-[#181624] border border-white/15 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-[#6D4AFF] text-sm"
+              className="w-full pl-9 pr-4 py-2.5 bg-[#181624] border border-white/15 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-[#F59E0B]/60 text-sm"
               autoFocus
             />
           </div>
@@ -98,12 +98,12 @@ export function StartPrivateChatModal({ open, onClose }: Props) {
                   key={u.id}
                   onClick={() => startChat(u)}
                   disabled={creatingId !== null}
-                  className="w-full flex items-center justify-between px-3.5 py-3 hover:bg-purple-900/30 transition-colors text-left disabled:opacity-50 border-0 cursor-pointer text-white"
+                  className="w-full flex items-center justify-between px-3.5 py-3 hover:bg-white/[0.04] transition-colors text-left disabled:opacity-50 border-0 cursor-pointer text-white"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <Avatar className="h-8 w-8 shrink-0 border border-white/15 bg-purple-950">
+                    <Avatar className="h-8 w-8 shrink-0 border border-white/15 bg-[#1c1f38]">
                       <AvatarImage src={u.avatar ?? undefined} className="object-cover" />
-                      <AvatarFallback className="text-xs bg-purple-900 text-white">
+                      <AvatarFallback className="text-xs font-bold bg-[#1c1f38] text-[#F59E0B]">
                         {u.name.slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
@@ -113,7 +113,7 @@ export function StartPrivateChatModal({ open, onClose }: Props) {
                     </div>
                   </div>
                   {creatingId === u.id && (
-                    <span className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin shrink-0" />
+                    <span className="w-4 h-4 border-2 border-[#F59E0B] border-t-transparent rounded-full animate-spin shrink-0" />
                   )}
                 </button>
               ))}

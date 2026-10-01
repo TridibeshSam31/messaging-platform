@@ -71,7 +71,7 @@ export function useMessages(conversationId: string) {
         // sendMessage's Prisma `include` doesn't select readReceipts, so this
         // comes back without that field even though the Message type says
         // it's required — default it so nothing downstream trips on undefined.
-        addNewMessage({ ...saved, readReceipts: saved.readReceipts ?? [] })
+        addNewMessage({ ...saved, readReceipts: saved.readReceipts ?? [] }, false, true)
         updateLastMessage(conversationId, saved)
       } else {
         sendWS({ type: WS_EVENTS.CHAT, roomId: conversationId, message: text })

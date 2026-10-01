@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react"
-import { Users, Pencil, Search, ArrowLeft, UserPlus, User as UserIcon } from "lucide-react"
+import { Users, Pencil, Search, ArrowLeft, UserPlus } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -93,7 +93,7 @@ export function GroupSettings({ conversation, open, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(val) => !val && handleCloseDialog()}>
-      <DialogContent className="sm:max-w-md bg-[#12111C] border border-white/15 text-white">
+      <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[88vh] overflow-y-auto scrollbar-thin bg-[#12111C] border border-white/15 text-white p-5">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
             {showAddMember ? (
@@ -104,12 +104,12 @@ export function GroupSettings({ conversation, open, onClose }: Props) {
                 >
                   <ArrowLeft className="h-4 w-4" />
                 </button>
-                <UserPlus className="h-5 w-5 text-purple-400" />
+                <UserPlus className="h-5 w-5 text-[#F59E0B]" />
                 Add Members
               </>
             ) : (
               <>
-                <Users className="h-5 w-5 text-purple-400" />
+                <Users className="h-5 w-5 text-[#F59E0B]" />
                 Group Settings
               </>
             )}
@@ -125,7 +125,7 @@ export function GroupSettings({ conversation, open, onClose }: Props) {
                 placeholder="Search user to add..."
                 value={searchQuery}
                 onChange={(e) => handleSearchUsers(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 bg-[#181624] border border-white/15 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-[#6D4AFF] text-sm"
+                className="w-full pl-9 pr-4 py-2.5 bg-[#181624] border border-white/15 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:border-[#F59E0B]/60 text-sm"
                 autoFocus
               />
             </div>
@@ -139,9 +139,9 @@ export function GroupSettings({ conversation, open, onClose }: Props) {
                     className="flex items-center justify-between px-3.5 py-2.5 hover:bg-white/[0.04] transition-colors"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <Avatar className="h-8 w-8 shrink-0 border border-white/15 bg-purple-950">
+                      <Avatar className="h-8 w-8 shrink-0 border border-white/15 bg-[#1c1f38]">
                         <AvatarImage src={u.avatar ?? undefined} className="object-cover" />
-                        <AvatarFallback className="text-xs bg-purple-900 text-white">
+                        <AvatarFallback className="text-xs font-bold bg-[#1c1f38] text-[#F59E0B]">
                           {u.name.slice(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
@@ -155,7 +155,7 @@ export function GroupSettings({ conversation, open, onClose }: Props) {
                       size="sm"
                       onClick={() => handleAddMember(u)}
                       disabled={addingId === u.id}
-                      className="h-7 text-xs bg-[#6D4AFF] hover:bg-[#5B3CC4] text-white px-2.5 shrink-0"
+                      className="h-7 text-xs bg-gradient-to-r from-[#D97706] to-[#F59E0B] text-black font-semibold hover:opacity-90 px-3 shrink-0 border-0"
                     >
                       {addingId === u.id ? "Adding..." : "Add"}
                     </Button>

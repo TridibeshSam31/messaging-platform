@@ -78,21 +78,27 @@ export function ChatHeader({ conversation }: Props) {
               {groupInitials}
             </div>
           ) : (
-            <Avatar className="h-8 w-8 border-0 bg-[#2c2f50]">
-              <AvatarImage src={avatarSrc} className="object-cover" />
-              <AvatarFallback className="bg-[#2c2f50] text-[#8892c0] text-[10px] font-bold flex items-center justify-center">
-                {other?.user.name ? other.user.name.slice(0, 2).toUpperCase() : <UserIcon className="h-4 w-4" />}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className="h-8 w-8 border-0 bg-[#2c2f50]">
+                <AvatarImage src={avatarSrc} className="object-cover" />
+                <AvatarFallback className="bg-[#2c2f50] text-[#8892c0] text-[10px] font-bold flex items-center justify-center">
+                  {other?.user.name ? other.user.name.slice(0, 2).toUpperCase() : <UserIcon className="h-4 w-4" />}
+                </AvatarFallback>
+              </Avatar>
+              {isOnline && (
+                <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-[#0c0d1b]" />
+              )}
+            </div>
           )}
         </div>
 
         {/* Title + member count / online status */}
-        <div className="flex items-baseline gap-1.5 min-w-0">
+        <div className="flex flex-col min-w-0">
           <p className="font-bold text-[13px] text-white truncate leading-tight">
             {name}
           </p>
-          <span className="text-[11px] text-[#8892c0] font-normal shrink-0">
+          <span className="text-[10px] text-[#8892c0] font-normal truncate mt-0.5 flex items-center gap-1">
+            {isOnline && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block shrink-0" />}
             {statusText}
           </span>
         </div>
