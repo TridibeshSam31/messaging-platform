@@ -3,6 +3,7 @@ import {Request,Response,NextFunction} from "express"
 import {randomUUID} from "crypto"
 
 import {log} from "../lib/logger.js"
+import {metrics} from "../lib/metrics.js"
 
 export function requestLogger(req:Request,res:Response,next:NextFunction){
 
@@ -11,9 +12,11 @@ export function requestLogger(req:Request,res:Response,next:NextFunction){
 
     const start = Date.now()
 
-     res.setHeader("X-Request-Id", requestId);
+    res.setHeader("X-Request-Id", requestId);
 
-    log("info", "http.request.started", {
+    metrics.http.requestsTotal.increment();
+
+    log.info( "http.request.started", {
         requestId,
         method: req.method,
         path: req.originalUrl,
@@ -22,7 +25,13 @@ export function requestLogger(req:Request,res:Response,next:NextFunction){
     res.on("finish", () => {
         const durationMs = Date.now() - start;
 
-        log("info", "http.request.completed", {
+        metrics.http.requestDurationMs.observe(durationMs);
+
+        if (res.statusCode >= 400) {
+            metrics.http.errorsTotal.increment();
+        }
+
+        log.info("http.request.completed", {
             requestId,
             method: req.method,
             path: req.originalUrl,
@@ -34,4 +43,3 @@ export function requestLogger(req:Request,res:Response,next:NextFunction){
     next()
 
 }
-

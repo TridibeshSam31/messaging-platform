@@ -1,4 +1,4 @@
-/*
+/**
 this file will include 
 
 join_room
@@ -13,12 +13,12 @@ user_offline broadcast
 
 
 
-*/
+**/
 
 import { WebSocket } from "ws";
-
 import { rooms, socketRooms, clients } from "../index.js"
 import { prisma } from "../../lib/prisma.js";
+import { metrics } from "../../lib/metrics.js";
 
 interface JoinRoomMessage {
     type: "join_room",
@@ -42,6 +42,8 @@ export async function handlePresence(ws: WebSocket, message: JoinRoomMessage | L
 
 
         if (!currentUser) {
+            metrics.websocket.messagesSentTotal.increment();
+
             ws.send(JSON.stringify({
                 type: "error",
                 message: "Unauthorized"
@@ -60,6 +62,8 @@ export async function handlePresence(ws: WebSocket, message: JoinRoomMessage | L
         });
 
         if (!membership) {
+            metrics.websocket.messagesSentTotal.increment();
+
             ws.send(JSON.stringify({
                 type: "error",
                 message: "You are not a member of this conversation"
@@ -89,6 +93,8 @@ export async function handlePresence(ws: WebSocket, message: JoinRoomMessage | L
 
         //Notify the current user that he has joined this particular room
 
+        metrics.websocket.messagesSentTotal.increment();
+
         ws.send(JSON.stringify({
             type: "joined_room",
             roomId
@@ -99,6 +105,8 @@ export async function handlePresence(ws: WebSocket, message: JoinRoomMessage | L
         for (const socket of rooms.get(roomId)!) {
 
             if (socket === ws) continue;
+
+            metrics.websocket.messagesSentTotal.increment();
 
             socket.send(JSON.stringify({
                 type: "user_joined",
@@ -113,9 +121,11 @@ export async function handlePresence(ws: WebSocket, message: JoinRoomMessage | L
     }
 
     if (message.type === "leave_room") {
-        
+
         //adding guard of auth
         if (!currentUser) {
+            metrics.websocket.messagesSentTotal.increment();
+
          ws.send(JSON.stringify({
             type: "error",
             message: "Unauthorized"
@@ -128,6 +138,9 @@ export async function handlePresence(ws: WebSocket, message: JoinRoomMessage | L
         socketRooms.get(ws)?.delete(roomId);
 
         for (const socket of rooms.get(roomId) ?? []) {
+
+            metrics.websocket.messagesSentTotal.increment();
+
             socket.send(JSON.stringify({
                 type: "user_left",
                 roomId,
@@ -138,6 +151,8 @@ export async function handlePresence(ws: WebSocket, message: JoinRoomMessage | L
         if (rooms.get(roomId)?.size === 0) {
             rooms.delete(roomId);
         }
+
+        metrics.websocket.messagesSentTotal.increment();
 
         ws.send(JSON.stringify({
             type: "left_room",
@@ -150,11 +165,6 @@ export async function handlePresence(ws: WebSocket, message: JoinRoomMessage | L
 
 }
 
-/*
-earlier I was sending two request on a user leaving to everytone that was not right
-
-
-
-
-
-*/
+//
+//earlier I was sending two request on a user leaving to everytone that was not right
+//

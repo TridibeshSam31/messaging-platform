@@ -1,42 +1,45 @@
 import { WebSocket } from "ws"
 import { clients, onlineUsers } from "../index.js"
 import { prisma } from "../../lib/prisma.js"
+import { metrics } from "../../lib/metrics.js"
 
 
 
 interface DeliveredMessage {
-    type:      "delivered"
+    type:       "delivered"
     messageId: string    // the message that was delivered to this client's device
 }
 
 
 
-/*
+/**
   handleDelivered  
 
   Client sends (as soon as it receives a "chat" event and renders the bubble):
     { "type": "delivered", "messageId": "..." }
- 
+
   Server:
-   1. Identify recipient from clients Map
-    2. Look up the original sender of the message
-   3. Push a "message_delivered" event to every active socket of that sender
-       so their UI can upgrade the single-tick → double-tick
- 
+  1. Identify recipient from clients Map
+   2. Look up the original sender of the message
+  3. Push a "message_delivered" event to every active socket of that sender
+     so their UI can upgrade the single-tick → double-tick
+
   No DB write needed here — "delivered" is a real-time signal only.
   If you later want to persist delivery (e.g., for analytics or offline replay),
   add a DeliveryReceipt model and insert it here before the broadcast.
- 
+
   Why not broadcast to the whole room?
-    Delivery is a per-device confirmation from recipient → sender.
-    Other room members don't need to know your message arrived on Bob's phone.
- */
+   Delivery is a per-device confirmation from recipient → sender.
+   Other room members don't need to know your message arrived on Bob's phone.
+  */
 export async function handleDelivered(ws: WebSocket, data: DeliveredMessage) {
 
     //  find the recipent (the one reporting delivery) 
     const recipient = clients.get(ws)
 
     if (!recipient) {
+        metrics.websocket.messagesSentTotal.increment();
+
         ws.send(JSON.stringify({ type: "error", message: "Unauthorized" }))
         return
     }
@@ -65,6 +68,8 @@ export async function handleDelivered(ws: WebSocket, data: DeliveredMessage) {
         })
 
         for (const socket of senderSockets) {
+            metrics.websocket.messagesSentTotal.increment();
+
             socket.send(payload)
         }
     }

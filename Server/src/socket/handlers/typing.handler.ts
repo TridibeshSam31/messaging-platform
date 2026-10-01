@@ -1,5 +1,4 @@
 /*
-
 typing
 stop typing
 
@@ -8,6 +7,7 @@ stop typing
 
 import { WebSocket } from "ws"
 import {clients,rooms} from "../index.js"
+import { metrics } from "../../lib/metrics.js"
 
 //find the sender , find which room he/she is in , then broadcast that he/she is writing
 
@@ -43,6 +43,8 @@ export function handleTyping(ws:WebSocket,message:TypingMessage | StopTypingMess
         if(socket === ws){
             continue
         }
+
+        metrics.websocket.messagesSentTotal.increment();
 
         socket.send(JSON.stringify({
             type:message.type,

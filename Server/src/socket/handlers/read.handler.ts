@@ -2,6 +2,7 @@ import { WebSocket } from "ws"
 import { clients, rooms, onlineUsers } from "../index.js"
 import { MessageHandlerClass } from "../../services/message.service.js"
 import { prisma } from "../../lib/prisma.js"
+import { metrics } from "../../lib/metrics.js"
 
 
 
@@ -13,32 +14,34 @@ interface ReadMessage {
 
 
 
-/*
-   handleRead  
- 
-  Client sends:
-    { "type": "read", "messageId": "...", "conversationId": "..." }
- 
-  Server:
+/**
+   handleRead 
+
+   Client sends:
+     { "type": "read", "messageId": "...", "conversationId": "..." }
+
+   Server:
    1. Identify reader from clients Map
    2. Persist via MessageHandlerClass.markAsRead
-      — upserts ReadReceipt row
+     — upserts ReadReceipt row
      — updates ConversationMember.lastReadMessageId
    3. Find the original message sender
    4. Push a "read_receipt" event to every socket of the original sender
-      so their UI can show the double-tick / "Seen" indicator in real time
- 
-  Why notify only the original sender and not the whole room?
+     so their UI can show the double-tick / "Seen" indicator in real time
+
+   Why notify only the original sender and not the whole room?
    Read receipts are a 1-to-1 acknowledgement (reader → original sender),
     not a room-wide event. Sending to the whole room would leak who has or
-    hasn't read every message to all participants.
- */
+   hasn't read every message to all participants.
+  */
 export async function handleRead(ws: WebSocket, data: ReadMessage) {
 
     //  find the
     const reader = clients.get(ws)
 
     if (!reader) {
+        metrics.websocket.messagesSentTotal.increment();
+
         ws.send(JSON.stringify({ type: "error", message: "Unauthorized" }))
         return
     }
@@ -73,6 +76,8 @@ export async function handleRead(ws: WebSocket, data: ReadMessage) {
         })
 
         for (const socket of senderSockets) {
+            metrics.websocket.messagesSentTotal.increment();
+
             socket.send(payload)
         }
     }

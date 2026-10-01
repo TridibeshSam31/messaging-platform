@@ -17,6 +17,7 @@ import {log} from "./lib/logger.js"
 import dotenv from "dotenv"
 import { createServer } from "http";
 import {requestLogger} from "./middleware/requestLogger.js"
+import {metrics} from "./lib/metrics.js"
 
 dotenv.config();
 
@@ -44,6 +45,36 @@ app.use(cookieParser());
 app.get("/", (req, res) => {
   res.json({
     message: "Server Running",
+  });
+});
+
+app.get("/metrics", (req, res) => {
+  res.json({
+    http: {
+      requestsTotal: metrics.http.requestsTotal.get(),
+      errorsTotal: metrics.http.errorsTotal.get(),
+      requestDuration: {
+        count: metrics.http.requestDurationMs.getCount(),
+        averageMs: metrics.http.requestDurationMs.getAverage(),
+      },
+    },
+
+    websocket: {
+      connectionsTotal: metrics.websocket.connectionsTotal.get(),
+      activeConnections: metrics.websocket.activeConnections.get(),
+      messagesReceivedTotal: metrics.websocket.messagesReceivedTotal.get(),
+      messagesSentTotal: metrics.websocket.messagesSentTotal.get(),
+      errorsTotal: metrics.websocket.errorsTotal.get(),
+    },
+
+    database: {
+      queriesTotal: metrics.database.queriesTotal.get(),
+      queryErrorsTotal: metrics.database.queryErrorsTotal.get(),
+      queryDuration: {
+        count: metrics.database.queryDurationMs.getCount(),
+        averageMs: metrics.database.queryDurationMs.getAverage(),
+      },
+    },
   });
 });
 
