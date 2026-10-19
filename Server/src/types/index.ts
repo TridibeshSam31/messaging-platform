@@ -28,6 +28,8 @@ export const sendMessageSchema = z.object({
     size: z.number(),
     fileName: z.string().optional(),
   })).optional(),
+  // Phase 6: client-generated id (a UUID) so a retried request doesn't create a duplicate
+  clientMessageId: z.string().min(1).max(64).optional(),
 });
 
 

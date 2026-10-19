@@ -43,7 +43,8 @@ export class MessageController {
         {
           type: validated.type,
           ...(validated.content !== undefined ? { content: validated.content } : {}),
-           ...(validated.attachments !== undefined ? { attachment: validated.attachments } : {})
+           ...(validated.attachments !== undefined ? { attachment: validated.attachments } : {}),
+           ...(validated.clientMessageId !== undefined ? { clientMessageId: validated.clientMessageId } : {})
         }
       );
       return res.status(201).json(message);

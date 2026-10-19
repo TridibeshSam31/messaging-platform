@@ -4,6 +4,7 @@ import { useChatStore } from "@/stores/chatStore"
 import { connectSocket, disconnectSocket, onWSMessage, sendWS, joinRoom, leaveRoom } from "./index"
 import { WS_EVENTS } from "@/components/utils/constants"
 import type { Message } from "@/types"
+import { confirmMessage, resendPendingForRoom, restoreOutbox, clearOutbox } from "./outbox"
 
 // One shared connection per logged-in session, opened here since ChatPage is
 // the top-level thing that mounts for the whole "logged in" part of the app.
@@ -27,11 +28,15 @@ export function useSocketEvents() {
     if (!user) {
       if (hasConnectedRef.current) {
         disconnectSocket()
+        clearOutbox() // Phase 6: logout → don't leave unsent message text in localStorage
         hasConnectedRef.current = false
       }
       return
     }
 
+    // Phase 6: load this user's unsent messages from before the refresh. They're
+    // re-sent when their room's joined_room arrives (resendPendingForRoom below).
+    restoreOutbox(user.id)
     connectSocket()
     hasConnectedRef.current = true
 
@@ -47,6 +52,10 @@ export function useSocketEvents() {
     const message = withDefaults(msg.data as Message)
 
     const isIncoming = message.senderId !== user.id
+
+    // Phase 6: the broadcast also reaches the tab that sent it — if it arrives
+    // before (or instead of) the ack, it proves the save worked just as well
+    if (!isIncoming && message.clientMessageId) confirmMessage(message.clientMessageId)
 
     const isActiveConversation =
         useChatStore.getState().activeConversationId ===
@@ -78,6 +87,9 @@ export function useSocketEvents() {
         // since the `chat` broadcast above deliberately skips the sender.
        case WS_EVENTS.MESSAGE_ACK: {
     const message = withDefaults(msg.data as Message)
+
+    // Phase 6: saved on the server → stop retrying this one
+    if (message.clientMessageId) confirmMessage(message.clientMessageId)
 
     addNewMessage(
         message,
@@ -128,6 +140,11 @@ export function useSocketEvents() {
         // Phase 5: someone deleted a message over REST — show it as deleted here too
         case WS_EVENTS.MESSAGE_DELETED:
           deleteMessageInStore(msg.conversationId as string, msg.messageId as string)
+          break
+
+        // Phase 6: server confirmed we're (re)joined — resend this room's pending messages
+        case WS_EVENTS.JOINED_ROOM:
+          resendPendingForRoom(msg.roomId as string)
           break
 
         case WS_EVENTS.ERROR:

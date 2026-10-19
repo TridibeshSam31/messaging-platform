@@ -20,7 +20,8 @@ export function useMessageRecovery() {
 
     for (const [convId, list] of Object.entries(messages)) {
       // our "last processed message" = the newest one in the store (list is oldest → newest)
-      const last = list[list.length - 1]
+      // Phase 6: skip our own "sending…" messages — their temporary id doesn't exist on the server
+      const last = [...list].reverse().find((m) => !m.status)
       // nothing loaded for this chat yet → it'll load fully when opened, nothing to recover
       if (!last) continue
       recoverConversation(convId, last.id)

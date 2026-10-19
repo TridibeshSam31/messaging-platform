@@ -31,7 +31,7 @@ Returns: { messageId, userId, readAt }
 
 import {AppError} from "../middleware/errorHandler.js"
 import {prisma} from "../lib/prisma.js"
-import { MessageType } from "@prisma/client"
+import { MessageType, Prisma } from "@prisma/client"
 //Phase 5: the service publishes after saving. publishEvent is transport-neutral —
 //it takes plain data (room id + payload) and knows nothing about req/res or a ws socket
 import { publishEvent } from "../socket/realtime.js"
@@ -176,7 +176,7 @@ export class MessageHandlerClass{
         }
     }
 
-    static async sendMessage(conversationId:string,content:string,senderId:string,data:{type:MessageType,content?:string,attachment?:{url:string,mimeType:string,size:number,fileName?:string}[]}){
+    static async sendMessage(conversationId:string,content:string,senderId:string,data:{type:MessageType,content?:string,attachment?:{url:string,mimeType:string,size:number,fileName?:string}[],clientMessageId?:string}){
         
         //verifying the membership first
         await prisma.conversationMember.findUniqueOrThrow({
@@ -190,7 +190,11 @@ export class MessageHandlerClass{
 
         //Phase 5: keep the saved message in a variable instead of returning right away,
         //because we still have to publish it after the transaction has committed
-        const savedMessage = await prisma.$transaction(async(tx)=>{
+        let savedMessage
+
+        try {
+
+        savedMessage = await prisma.$transaction(async(tx)=>{
             //create message
 
             const messageData: any = {
@@ -199,6 +203,8 @@ export class MessageHandlerClass{
                 type: data.type,
                 // Prisma schema expects content: string | null; ensure undefined becomes null
                 content: data.content ?? null,
+                // Phase 6: null when an old client doesn't send one (then no dedupe)
+                clientMessageId: data.clientMessageId ?? null,
             }
 
             if (data.attachment) {
@@ -233,6 +239,38 @@ export class MessageHandlerClass{
 
             return message
         })
+
+        } catch (error) {
+
+            //Phase 6 — idempotency.
+            //P2002 = Prisma's "unique constraint failed": this (sender, clientMessageId) is
+            //already saved, i.e. this request is a RETRY of a message we already created.
+            //We don't check "does it exist?" before inserting, because two retries arriving
+            //at the same moment (maybe on two instances) could both see "no" and both insert.
+            //Letting the database refuse the second one is the only race-free way.
+            if (
+                data.clientMessageId &&
+                error instanceof Prisma.PrismaClientKnownRequestError &&
+                error.code === "P2002"
+            ) {
+                const existing = await prisma.message.findUnique({
+                    where: {
+                        senderId_clientMessageId: { senderId, clientMessageId: data.clientMessageId }
+                    },
+                    include: {
+                        sender: { select: { id: true, name: true, avatar: true } },
+                        attachments: true
+                    }
+                })
+
+                //return the ORIGINAL message, as if we had just created it. No second publish:
+                //the first request already broadcast it (and Phase 2 recovery covers anyone who missed it)
+                if (existing) return existing
+            }
+
+            //any other error is a real failure — let the caller handle it
+            throw error
+        }
 
         //Phase 5 — one pipeline for every transport (REST with attachments AND WebSocket text):
         //1. persist (done above — the transaction has committed by now)

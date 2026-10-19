@@ -706,13 +706,13 @@ graph TD
 
 Prevent duplicate messages when clients retry.
 
-- [ ] Generate `clientMessageId`
-- [ ] Send it with each message
-- [ ] Store it with the message
-- [ ] Add database uniqueness constraint
-- [ ] Make message creation idempotent
-- [ ] Safely retry failed messages
-- [ ] Prevent duplicate messages after reconnect
+- [x] Generate `clientMessageId`
+- [x] Send it with each message
+- [x] Store it with the message
+- [x] Add database uniqueness constraint
+- [x] Make message creation idempotent
+- [x] Safely retry failed messages
+- [x] Prevent duplicate messages after reconnect
 - [ ] Test timeout + retry scenarios
 
 Example:

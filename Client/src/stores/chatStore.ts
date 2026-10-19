@@ -24,6 +24,7 @@ type ChatStore = {
     isActiveConversation: boolean
   ) => void
   mergeRecoveredMessages: (convId: string, msgs: Message[], myUserId: string) => void
+  setMessageStatus: (convId: string, clientMessageId: string, status: "sending" | "failed") => void
   editMessageInStore: (msg: Message) => void
   deleteMessageInStore: (convId: string, msgId: string) => void
   setTyping: (convId: string, userId: string, isTyping: boolean) => void
@@ -115,6 +116,18 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         return
     }
 
+    // Phase 6: this is the server's version of a message we already show
+    // optimistically ("sending…") — swap it in place instead of adding a second bubble
+    if (msg.clientMessageId) {
+        const i = existing.findIndex((m) => m.clientMessageId === msg.clientMessageId)
+        if (i !== -1) {
+            const next = [...existing]
+            next[i] = msg
+            set({ messages: { ...state.messages, [msg.conversationId]: next } })
+            return
+        }
+    }
+
     const conversations = state.conversations.map((c) => {
         if (
             c.id === msg.conversationId &&
@@ -144,7 +157,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   // then sort by time because recovered ones can be older than those WS ones.
   mergeRecoveredMessages: (convId, msgs, myUserId) => {
     const state = get()
-    const existing = state.messages[convId] || []
+    // Phase 6: if the server already has one of our "sending…" messages, drop the
+    // optimistic copy — the real one from `msgs` replaces it below
+    const recoveredClientIds = new Set(msgs.map((m) => m.clientMessageId).filter(Boolean))
+    const existing = (state.messages[convId] || []).filter(
+      (m) => !(m.status && m.clientMessageId && recoveredClientIds.has(m.clientMessageId))
+    )
 
     const knownIds = new Set(existing.map((m) => m.id))
     const fresh = msgs.filter((m) => !knownIds.has(m.id)) // dedupe
@@ -165,6 +183,19 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         : state.conversations.map((c) =>
             c.id === convId ? { ...c, unreadCount: c.unreadCount + newIncoming } : c
           ),
+    })
+  },
+
+  // Phase 6: flip an optimistic message between "sending" and "failed"
+  setMessageStatus: (convId, clientMessageId, status) => {
+    const existing = get().messages[convId] || []
+    set({
+      messages: {
+        ...get().messages,
+        [convId]: existing.map((m) =>
+          m.clientMessageId === clientMessageId && m.status ? { ...m, status } : m
+        ),
+      },
     })
   },
 

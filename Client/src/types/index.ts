@@ -24,6 +24,10 @@ export type Message = {
   }
   attachments: Attachment[]
   readReceipts: ReadReceipt[]   
+  // Phase 6: id this client generated before sending (same on every retry)
+  clientMessageId?: string | null
+  // Phase 6: only on our own not-yet-confirmed messages; real server messages have no status
+  status?: "sending" | "failed"
 }
 
 export type Attachment = {

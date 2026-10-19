@@ -31,6 +31,8 @@ export const WS_EVENTS = {
   USER_ONLINE: "user_online",
   USER_OFFLINE: "user_offline",
   USER_LEFT: "user_left",
+  // Phase 6: server confirms join_room — safe moment to resend pending messages
+  JOINED_ROOM: "joined_room",
   // Phase 5: REST edit/delete now broadcast too (Server/src/services/message.service.ts)
   MESSAGE_EDITED: "message_edited",
   MESSAGE_DELETED: "message_deleted",

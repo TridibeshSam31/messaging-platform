@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { format } from "date-fns"
-import { Pencil, Trash2, Check, CheckCheck } from "lucide-react"
+import { Pencil, Trash2, Check, CheckCheck, Clock } from "lucide-react"
 
 import {
   Avatar,
@@ -31,6 +31,7 @@ import { messageApi } from "@/api/message"
 import { useChatStore } from "@/stores/chatStore"
 import { toast } from "sonner"
 import type { Message } from "@/types"
+import { retryMessage } from "@/socket/outbox"
 
 interface Props {
   message: Message
@@ -202,6 +203,23 @@ export function MessageBubble({
   const renderMessageStatus = () => {
     if (!isOwn || isDeleted) {
       return null
+    }
+
+    // Phase 6: not confirmed by the server yet
+    if (message.status === "sending") {
+      return <Clock className="h-3 w-3 text-gray-500" aria-label="Sending" />
+    }
+
+    // Phase 6: gave up after several tries — let the user retry (same clientMessageId)
+    if (message.status === "failed") {
+      return (
+        <button
+          onClick={() => retryMessage(message.clientMessageId!)}
+          className="text-rose-400 hover:text-rose-300 border-0 bg-transparent cursor-pointer p-0 text-[10px]"
+        >
+          Not sent · Retry
+        </button>
+      )
     }
 
     /*
@@ -377,7 +395,8 @@ export function MessageBubble({
             {/* Edit / Delete buttons */}
             {isOwn &&
               !isDeleted &&
-              !editing && (
+              !editing &&
+              !message.status && (
                 <div className="opacity-0 group-hover/bubble:opacity-100 transition-opacity absolute -top-8 right-0 bg-[#141320] border border-white/15 rounded-lg shadow-xl px-1 py-0.5 flex items-center gap-1 z-10 select-none">
                   {message.type === "TEXT" && (
                     <button

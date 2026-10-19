@@ -19,7 +19,8 @@ import { metrics } from "../../lib/metrics.js";
 interface chatMessage {
     type: "chat",
     roomId: string,
-    message: string
+    message: string,
+    clientMessageId?: string // Phase 6: same id on every retry of the same message
 }
 
 export async function handleChat(ws: WebSocket, data: chatMessage) {
@@ -71,7 +72,14 @@ export async function handleChat(ws: WebSocket, data: chatMessage) {
         data.roomId,
         data.message,
         sender.userId,
-        { type: "TEXT", content: data.message }
+        {
+            type: "TEXT",
+            content: data.message,
+            //Phase 6: only accept a sane string — anything else is ignored (no dedupe for it)
+            ...(typeof data.clientMessageId === "string" && data.clientMessageId.length <= 64
+                ? { clientMessageId: data.clientMessageId }
+                : {})
+        }
     );
 
     log.info("ws.chat.sent", {

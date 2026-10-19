@@ -40,12 +40,14 @@ export const messageApi = {
     convId: string,
     content: string,
     type: string = "TEXT",
-    attachments: AttachmentInput[] = []
+    attachments: AttachmentInput[] = [],
+    clientMessageId?: string // Phase 6: lets the server ignore a retried duplicate
   ): Promise<Message> => {
     const res = await api.post(`/conversations/${convId}/messages`, {
       content: content || undefined,
       type,
       attachments,
+      clientMessageId,
     })
     return res.data
   },

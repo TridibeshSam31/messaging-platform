@@ -102,6 +102,9 @@ model Message {
   updatedAt DateTime @updatedAt @map("updated_at")
   editedAt DateTime? @map("edited_at")
   deletedAt DateTime? @map("deleted_at")
+  // Phase 6: id the CLIENT generates before sending; a retry re-sends the same one.
+  // Nullable because messages created before Phase 6 do not have one.
+  clientMessageId String? @map("client_message_id")
 
 
   conversation         Conversation         @relation("ConversationMessages", fields: [conversationId], references: [id], onDelete: Cascade)
@@ -111,6 +114,10 @@ model Message {
   lastMessageOf        Conversation?        @relation("LastMessage")
   lastReadBy           ConversationMember[] @relation("LastReadMessage")
   @@index([conversationId, createdAt]) // Fast message pagination
+  // Phase 6: the DATABASE refuses a second message with the same (sender, clientMessageId),
+  // even if two retries hit two different server instances at the same moment.
+  // (Postgres allows many NULLs in a unique index, so old messages are fine.)
+  @@unique([senderId, clientMessageId])
   @@map("messages")
 
 
