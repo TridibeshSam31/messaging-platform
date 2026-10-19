@@ -17,6 +17,8 @@ export function useSocketEvents() {
     markOffline,
     updateLastRead,
     markDelivered,
+    editMessageInStore,
+    deleteMessageInStore,
   } = useChatStore()
 
   const hasConnectedRef = useRef(false)
@@ -37,8 +39,10 @@ export function useSocketEvents() {
 
     const unsubscribe = onWSMessage((msg) => {
       switch (msg.type) {
-        // Broadcast to everyone else in the room when another member sends
-        // a message (chat.handler.ts skips the sender's own socket here).
+        // Phase 5: broadcast by the message service to the WHOLE room for every
+        // new message — WS text and REST attachments alike, sender included.
+        // In the tab that sent it, addNewMessage sees the id already exists
+        // (from message_ack / the REST response) and ignores the copy.
         case WS_EVENTS.CHAT: {
     const message = withDefaults(msg.data as Message)
 
@@ -114,6 +118,16 @@ export function useSocketEvents() {
         // a live-only signal, so there's nothing to reconcile on reconnect.
         case WS_EVENTS.MESSAGE_DELIVERED:
           markDelivered(msg.messageId as string)
+          break
+
+        // Phase 5: someone edited a message over REST — replace its content here too
+        case WS_EVENTS.MESSAGE_EDITED:
+          editMessageInStore(msg.data as Message)
+          break
+
+        // Phase 5: someone deleted a message over REST — show it as deleted here too
+        case WS_EVENTS.MESSAGE_DELETED:
+          deleteMessageInStore(msg.conversationId as string, msg.messageId as string)
           break
 
         case WS_EVENTS.ERROR:

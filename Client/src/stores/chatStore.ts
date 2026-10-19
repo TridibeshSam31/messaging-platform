@@ -174,7 +174,9 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       messages: {
         ...get().messages,
         [updatedMsg.conversationId]: existing.map((m) =>
-          m.id === updatedMsg.id ? updatedMsg : m
+          // merge instead of replace: the server's edit response has no readReceipts,
+          // so `{ ...m, ...updatedMsg }` keeps the existing ones (read ticks stay visible)
+          m.id === updatedMsg.id ? { ...m, ...updatedMsg } : m
         ),
       },
     })

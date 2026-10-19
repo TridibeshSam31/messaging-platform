@@ -48,12 +48,11 @@ export function useMessages(conversationId: string) {
   //  - Any attachments -> REST POST, because Server/src/socket/handlers/
   //    chat.handler.ts is hard-coded to `{ type: "TEXT", content }` and has
   //    no attachment support. This path adds the message to the store
-  //    immediately, since there's no ack event for REST-created messages —
-  //    but it also means an attachment message won't show up live for the
-  //    other participant until they reload or refetch. That's a real gap in
-  //    the current backend, not something this hook can paper over — the
-  //    clean fix is teaching chat.handler.ts to accept `type`/`attachments`
-  //    the way the REST route already does.
+  //    immediately, since there's no ack event for REST-created messages.
+  //  Either way the server's message service (Phase 5) saves the message and
+  //  then broadcasts a `chat` event to the whole room, so attachment messages
+  //  now show up live for the other participants too. The copy that comes
+  //  back to this tab is ignored by addNewMessage's duplicate-id check.
   const sendMessage = async (text: string, files: File[]) => {
     if (!text.trim() && files.length === 0) return
     setSending(true)

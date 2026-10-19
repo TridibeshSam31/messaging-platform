@@ -31,5 +31,8 @@ export const WS_EVENTS = {
   USER_ONLINE: "user_online",
   USER_OFFLINE: "user_offline",
   USER_LEFT: "user_left",
+  // Phase 5: REST edit/delete now broadcast too (Server/src/services/message.service.ts)
+  MESSAGE_EDITED: "message_edited",
+  MESSAGE_DELETED: "message_deleted",
   ERROR: "error",
 } as const

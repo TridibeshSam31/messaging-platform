@@ -681,13 +681,13 @@ If A and B are connected to different WebSocket servers, B should still receive 
 
 Currently REST and WebSocket are separate transports. The goal is to make them share the same message business logic.
 
-- [ ] Extract message creation into a reusable service
-- [ ] REST → Message Service
-- [ ] WebSocket → Message Service
-- [ ] Persist before publishing event
-- [ ] Publish attachment messages through realtime pipeline
+- [x] Extract message creation into a reusable service
+- [x] REST → Message Service
+- [x] WebSocket → Message Service
+- [x] Persist before publishing event
+- [x] Publish attachment messages through realtime pipeline
 - [ ] Make attachment messages appear live without reload
-- [ ] Keep transport concerns outside business logic
+- [x] Keep transport concerns outside business logic
 
 **Target**
 

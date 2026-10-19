@@ -32,6 +32,9 @@ Returns: { messageId, userId, readAt }
 import {AppError} from "../middleware/errorHandler.js"
 import {prisma} from "../lib/prisma.js"
 import { MessageType } from "@prisma/client"
+//Phase 5: the service publishes after saving. publishEvent is transport-neutral —
+//it takes plain data (room id + payload) and knows nothing about req/res or a ws socket
+import { publishEvent } from "../socket/realtime.js"
 
 export class MessageHandlerClass{
     static async getMessages(conversationId:string , userId:string, cursor?:string,limit:number = 50){
@@ -185,8 +188,10 @@ export class MessageHandlerClass{
             }
         })
 
-        return prisma.$transaction(async(tx)=>{
-            //create message 
+        //Phase 5: keep the saved message in a variable instead of returning right away,
+        //because we still have to publish it after the transaction has committed
+        const savedMessage = await prisma.$transaction(async(tx)=>{
+            //create message
 
             const messageData: any = {
                 conversationId,
@@ -229,7 +234,18 @@ export class MessageHandlerClass{
             return message
         })
 
+        //Phase 5 — one pipeline for every transport (REST with attachments AND WebSocket text):
+        //1. persist (done above — the transaction has committed by now)
+        //2. publish, so every member on every server instance sees it live
+        //Sent to the WHOLE room, sender included: the sender's other tabs need it too, and the
+        //tab that sent it ignores the copy because the client dedupes messages by id.
+        await publishEvent({
+            target: "room",
+            roomId: conversationId,
+            payload: { type: "chat", data: savedMessage }
+        })
 
+        return savedMessage
 
     }
 
@@ -251,7 +267,7 @@ export class MessageHandlerClass{
             
         }
 
-        return prisma.message.update({
+        const updated = await prisma.message.update({
             where:{
                 id:messageId
             },
@@ -272,8 +288,15 @@ export class MessageHandlerClass{
             }
         })
 
-        
-     
+        //Phase 5: persist first (above), then tell the room so others see the edit live
+        await publishEvent({
+            target: "room",
+            roomId: updated.conversationId,
+            payload: { type: "message_edited", data: updated }
+        })
+
+        return updated
+
     }
 
     static async deleteMessage(messageId: string, userId: string){
@@ -288,6 +311,12 @@ export class MessageHandlerClass{
             throw new AppError(404,"Message not found")
         }
 
+        //security fix: before this check ANY logged-in user could delete ANYONE's message
+        //(same guard editMesaage already has)
+        if(message.senderId !== userId){
+            throw new AppError(403,"You can only delete your own message")
+        }
+
         //soft delete 
         await prisma.message.update({
             where:{
@@ -299,6 +328,13 @@ export class MessageHandlerClass{
             }
         })
         //if hard delete then we would have used directly delete fxn and delete the id of that message directly
+
+        //Phase 5: persist first (above), then tell the room so the bubble disappears live
+        await publishEvent({
+            target: "room",
+            roomId: message.conversationId,
+            payload: { type: "message_deleted", messageId, conversationId: message.conversationId }
+        })
 
         return {id:messageId , conversationId:message.conversationId}
             

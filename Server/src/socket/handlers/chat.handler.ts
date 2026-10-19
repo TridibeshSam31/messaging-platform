@@ -14,7 +14,6 @@ import { clients, rooms } from "../index.js"
 import { MessageHandlerClass } from "../../services/message.service.js";
 import { log } from "../../lib/logger.js";
 import { metrics } from "../../lib/metrics.js";
-import { publishEvent } from "../realtime.js";
 
 
 interface chatMessage {
@@ -66,6 +65,8 @@ export async function handleChat(ws: WebSocket, data: chatMessage) {
         return
     }
 
+    //Phase 5: the service saves AND publishes the "chat" event to the room (same as the
+    //REST route) — this handler only deals with WebSocket things: parsing, guards, the ack
     const chatMessage = await MessageHandlerClass.sendMessage(
         data.roomId,
         data.message,
@@ -80,25 +81,7 @@ export async function handleChat(ws: WebSocket, data: chatMessage) {
     messageId: chatMessage.id,
     } );
 
-    //Phase 3: broadcast through Redis so room members on OTHER server instances get it too
-    //(recipient count is no longer known here — each instance only sees its own sockets)
-    await publishEvent({
-        target: "room",
-        roomId: data.roomId,
-        excludeConnectionId: sender.connectionId, //sender gets message_ack below instead
-        payload: {
-            type: "chat",
-            data: chatMessage
-        }
-    })
-
-    log.info("ws.chat.broadcast", {
-    userId: sender.userId,
-    connectionId: sender.connectionId,
-    roomId: data.roomId,
-    messageId: chatMessage.id,
-    });
-
+    //ack = "your message was saved", sent only to the socket that sent it
     metrics.websocket.messagesSentTotal.increment();
 
     ws.send(JSON.stringify({
