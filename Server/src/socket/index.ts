@@ -423,6 +423,14 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
 
 
 
+                        //user reconnected (e.g. page refresh) while we were waiting for the DB?
+
+                        //then they are online again — don't tell everyone they went offline
+
+                        if (onlineUsers.has(client.userId)) return
+
+
+
                         for (const { conversationId } of memberships) {
 
                             const roomSockets = rooms.get(conversationId)

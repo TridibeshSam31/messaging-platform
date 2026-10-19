@@ -201,7 +201,7 @@ export class MessageHandlerClass{
             },
             data:{
                 content,
-                editiedAt:new Date(),
+                editedAt:new Date(),
 
             },
             include:{
