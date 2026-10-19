@@ -9,9 +9,16 @@ import { sendMessageSchema } from "../types/index.js";
 export class MessageController {
   static async getMessages(req: Request, res: Response, next: NextFunction) {
     try {
-      const { cursor, limit } = req.query;
+      const { cursor, limit, after } = req.query;
       const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
       if (!id) throw new Error("Missing conversation id");
+
+      // Phase 2: ?after=<messageId> → recovery mode, return messages newer than that one
+      if (typeof after === "string") {
+        const recovered = await MessageHandlerClass.getMessagesAfter(id, req.userId!, after);
+        return res.status(200).json(recovered);
+      }
+
       const result = await MessageHandlerClass.getMessages(
         id, // Conversation ID
         req.userId!,

@@ -8,6 +8,7 @@ import { useChatStore } from "@/stores/chatStore"
 import { useSocketStore } from "@/stores/socketStore"
 import { useSocketEvents } from "@/socket/useSocketEvents"
 import { useConversation } from "@/hooks/useConversation"
+import { useMessageRecovery } from "@/hooks/useMessageRecovery"
 
 export function ChatPage() {
   const { user, loading } = useAuthStore()
@@ -16,6 +17,7 @@ export function ChatPage() {
 
   useConversation()
   const { joinRoom } = useSocketEvents()
+  useMessageRecovery() // Phase 2: refetch messages missed while disconnected
 
   useEffect(() => {
     if (!connected) return

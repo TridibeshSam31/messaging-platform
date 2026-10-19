@@ -594,12 +594,12 @@ graph TD
 
 WebSocket is a transport mechanism, not permanent storage. PostgreSQL remains the source of truth.
 
-- [ ] Add `lastMessageId` / cursor strategy
-- [ ] Track last processed message on client
-- [ ] Detect missed messages after reconnect
-- [ ] Fetch missed messages from PostgreSQL
-- [ ] Merge recovered messages into Zustand state
-- [ ] Deduplicate recovered messages
+- [x] Add `lastMessageId` / cursor strategy
+- [x] Track last processed message on client
+- [x] Detect missed messages after reconnect
+- [x] Fetch missed messages from PostgreSQL
+- [x] Merge recovered messages into Zustand state
+- [x] Deduplicate recovered messages
 - [ ] Test network interruption recovery
 - [ ] Test recovery after WebSocket server restart
 

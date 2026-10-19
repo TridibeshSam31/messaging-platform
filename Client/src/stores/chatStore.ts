@@ -23,6 +23,7 @@ type ChatStore = {
     isIncoming: boolean,
     isActiveConversation: boolean
   ) => void
+  mergeRecoveredMessages: (convId: string, msgs: Message[], myUserId: string) => void
   editMessageInStore: (msg: Message) => void
   deleteMessageInStore: (convId: string, msgId: string) => void
   setTyping: (convId: string, userId: string, isTyping: boolean) => void
@@ -137,6 +138,35 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         conversations,
     })
 },
+
+  // Phase 2: add messages fetched after a reconnect. Some of them may already
+  // be here (arrived over WS once the socket came back), so skip known ids,
+  // then sort by time because recovered ones can be older than those WS ones.
+  mergeRecoveredMessages: (convId, msgs, myUserId) => {
+    const state = get()
+    const existing = state.messages[convId] || []
+
+    const knownIds = new Set(existing.map((m) => m.id))
+    const fresh = msgs.filter((m) => !knownIds.has(m.id)) // dedupe
+    if (fresh.length === 0) return
+
+    const merged = [...existing, ...fresh].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    )
+
+    // same unread rule as addNewMessage: only others' messages, only if the chat isn't open
+    const isActive = state.activeConversationId === convId
+    const newIncoming = fresh.filter((m) => m.senderId !== myUserId).length
+
+    set({
+      messages: { ...state.messages, [convId]: merged },
+      conversations: isActive
+        ? state.conversations
+        : state.conversations.map((c) =>
+            c.id === convId ? { ...c, unreadCount: c.unreadCount + newIncoming } : c
+          ),
+    })
+  },
 
   editMessageInStore: (updatedMsg) => {
     const existing = get().messages[updatedMsg.conversationId] || []

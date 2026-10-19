@@ -24,6 +24,18 @@ export const messageApi = {
     return res.data
   },
 
+  // Phase 2: messages newer than `afterId`, oldest-first. hasMore = too many
+  // missed to return at once, caller should reload the latest page instead.
+  getAfter: async (
+    convId: string,
+    afterId: string
+  ): Promise<{ messages: Message[]; hasMore: boolean }> => {
+    const res = await api.get(`/conversations/${convId}/messages`, {
+      params: { after: afterId },
+    })
+    return res.data
+  },
+
   send: async (
     convId: string,
     content: string,

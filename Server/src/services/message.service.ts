@@ -117,6 +117,62 @@ export class MessageHandlerClass{
 
     }
 
+    //Phase 2 — message recovery
+    //client reconnects and says "the last message I have is afterId" → send everything newer
+    //opposite direction of getMessages above: oldest-first (asc), starting AFTER a message
+    static async getMessagesAfter(conversationId:string, userId:string, afterId:string, limit:number = 100){
+
+        //verify membership (same guard as getMessages)
+        await prisma.conversationMember.findFirstOrThrow({
+            where: {
+                conversationId,
+                userId
+            }
+        })
+
+        //find WHEN the client's last message was created — that time is our starting point
+        const afterMessage = await prisma.message.findFirst({
+            where: { id: afterId, conversationId },
+            select: { createdAt: true }
+        })
+
+        //unknown id → we can't tell what's missing, so tell the client to just reload the latest page
+        if (!afterMessage) {
+            return { messages: [], hasMore: true }
+        }
+
+        const messages = await prisma.message.findMany({
+            where: {
+                conversationId,
+                deletedAt: null,
+                createdAt: { gt: afterMessage.createdAt } //gt = greater than = strictly newer
+            },
+            orderBy: { createdAt: "asc" }, //oldest first, so the client can append them in order
+            take: limit + 1, //same +1 trick as getMessages: fetch one extra to know if more exist
+            include: {
+                sender: {
+                    select: {
+                        id: true,
+                        name: true,
+                        avatar: true
+                    }
+                },
+                attachments: true
+            }
+        })
+
+        //more than `limit` missed? drop the extra one and flag it — the client will reload instead
+        const hasMore = messages.length > limit
+        if (hasMore) {
+            messages.pop()
+        }
+
+        return {
+            messages,
+            hasMore
+        }
+    }
+
     static async sendMessage(conversationId:string,content:string,senderId:string,data:{type:MessageType,content?:string,attachment?:{url:string,mimeType:string,size:number,fileName?:string}[]}){
         
         //verifying the membership first
