@@ -3,7 +3,9 @@ import { metrics } from "./metrics.js"
 
 const createPrisma = () =>
     new PrismaClient({
-        log: ["query"]
+        // Phase 9: "query" printed every SQL statement as PLAIN TEXT between our JSON
+        // logs, which log tools can't parse (and it's very noisy). Opt-in for debugging only.
+        log: process.env.PRISMA_LOG_QUERIES === "true" ? ["query"] : []
     }).$extends({
         query: {
             $allOperations: async ({ args, query }) => {

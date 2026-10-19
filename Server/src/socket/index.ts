@@ -78,6 +78,10 @@ import { startRealtimeSubscriber, publishEvent } from "./realtime.js"
 
 import { addPresence, removePresence, getPresenceCount } from "../lib/presence.js"
 
+import { instanceId } from "../lib/instance.js"
+
+import { runWithTrace } from "../lib/tracing.js"
+
 
 
 
@@ -116,7 +120,7 @@ export const socketRooms = new Map<WebSocket, Set<string>>()
 
 //estamblishing connection
 
-const instanceId = randomUUID(); 
+//Phase 9: instanceId now lives in lib/instance.ts so logs, /metrics and /health all share it
 
 export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolean) {
 
@@ -179,6 +183,9 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
 
 
             const token = url.searchParams.get("token")
+
+            //Phase 9: count reconnects (client sends ?reconnect=1 when it is retrying)
+            const isReconnect = url.searchParams.get("reconnect") === "1"
 
 
 
@@ -434,6 +441,8 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
 
         metrics.websocket.connectionsTotal.increment();
 
+        if (isReconnect) metrics.websocket.reconnectsTotal.increment();
+
         metrics.websocket.activeConnections.increment();
 
 
@@ -442,7 +451,9 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
 
 
 
-            ws.on("message", async (raw) => {
+            //Phase 9: each incoming message gets its own traceId (lib/tracing.ts), so every
+            //log line written while handling it — handler, service, errors — can be grouped
+            ws.on("message", (raw) => runWithTrace(randomUUID(), async () => {
 
                 try {
 
@@ -562,7 +573,7 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
 
                 }
 
-            })
+            }))
 
 
 

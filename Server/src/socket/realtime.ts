@@ -77,6 +77,7 @@ export async function publishEvent(event: RealtimeEvent) {
         // so delivering here as well would send everything twice
     } catch (error) {
         // Redis is down → at least the users on this instance still get it
+        metrics.redis.publishFailuresTotal.increment() // Phase 9
         log.error("realtime.publish.failed", {
             error: error instanceof Error ? error.message : String(error),
         })

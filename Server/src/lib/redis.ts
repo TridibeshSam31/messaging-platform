@@ -8,6 +8,7 @@
 
 import { Redis } from "ioredis"
 import { log } from "./logger.js"
+import { metrics } from "./metrics.js"
 // load .env HERE: imports run before the dotenv.config() line in src/index.ts,
 // so without this REDIS_URL would still be undefined when this file runs
 import "dotenv/config"
@@ -25,6 +26,7 @@ function createConnection(name: string, enableOfflineQueue: boolean) {
 
     // without an "error" listener, a Redis outage would crash the whole Node process
     connection.on("error", (error) => {
+        metrics.redis.connectionErrorsTotal.increment() // Phase 9: counted, not just logged
         log.error("redis.error", { connection: name, error: error.message })
     })
 

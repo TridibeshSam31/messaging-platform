@@ -33,24 +33,34 @@ class Gauge {
 }
 
 class Histogram {
-    private values: number[] = [];
+    // Phase 9 fix: this used to push EVERY value into an array that was never emptied —
+    // one number per DB query, forever → memory grew for as long as the server ran.
+    // An average only needs the count and the running total, so keep just those (+ max).
+    private count = 0;
+    private sum = 0;
+    private max = 0;
 
     observe(value: number) {
-        this.values.push(value);
+        this.count++;
+        this.sum += value;
+        if (value > this.max) this.max = value;
     }
 
     getCount() {
-        return this.values.length;
+        return this.count;
     }
 
     getAverage() {
-        if (this.values.length === 0) {
+        if (this.count === 0) {
             return 0;
         }
 
-        const total = this.values.reduce((sum, value) => sum + value, 0);
+        return this.sum / this.count;
+    }
 
-        return total / this.values.length;
+    // the slowest one seen — an average hides spikes, the max shows them
+    getMax() {
+        return this.max;
     }
 }
 
@@ -67,6 +77,18 @@ export const metrics = {
         messagesReceivedTotal: new Counter(),
         messagesSentTotal: new Counter(),
         errorsTotal: new Counter(),
+        // Phase 9: connections that are a client RE-connecting (client sends ?reconnect=1).
+        // A sudden rise = clients keep dropping (network, proxy timeout, heartbeat issue).
+        reconnectsTotal: new Counter(),
+        // Phase 9: ms from "message saved" until the recipient's device reports "delivered"
+        deliveryLatencyMs: new Histogram(),
+    },
+
+    // Phase 9: Redis problems were only logged — now they are counted too
+    redis: {
+        connectionErrorsTotal: new Counter(),
+        publishFailuresTotal: new Counter(),
+        presenceFailuresTotal: new Counter(),
     },
 
     database: {

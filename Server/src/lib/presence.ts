@@ -15,6 +15,7 @@
 import { redisPublisher } from "./redis.js"
 import { onlineUsers } from "../socket/index.js"
 import { log } from "./logger.js"
+import { metrics } from "./metrics.js"
 
 const key = (userId: string) => `presence:${userId}`
 
@@ -38,6 +39,7 @@ export async function addPresence(userId: string, connectionId: string): Promise
         // exec() returns [[error, result], [error, result]] — we want SCARD's result
         return Number(results?.[1]?.[1] ?? 0)
     } catch (error) {
+        metrics.redis.presenceFailuresTotal.increment() // Phase 9
         log.error("presence.add.failed", { userId, error: String(error) })
         return localCount(userId)
     }
@@ -56,6 +58,7 @@ export async function removePresence(userId: string, connectionId: string): Prom
 
         return Number(results?.[1]?.[1] ?? 0)
     } catch (error) {
+        metrics.redis.presenceFailuresTotal.increment() // Phase 9
         log.error("presence.remove.failed", { userId, error: String(error) })
         return localCount(userId)
     }
@@ -68,6 +71,7 @@ export async function getPresenceCount(userId: string): Promise<number> {
     try {
         return await redisPublisher.scard(key(userId))
     } catch {
+        metrics.redis.presenceFailuresTotal.increment() // Phase 9
         return localCount(userId)
     }
 }

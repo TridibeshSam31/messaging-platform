@@ -4,6 +4,7 @@ import {randomUUID} from "crypto"
 
 import {log} from "../lib/logger.js"
 import {metrics} from "../lib/metrics.js"
+import {runWithTrace} from "../lib/tracing.js"
 
 export function requestLogger(req:Request,res:Response,next:NextFunction){
 
@@ -40,6 +41,9 @@ export function requestLogger(req:Request,res:Response,next:NextFunction){
         });
     });
 
-    next()
+    //Phase 9: everything that runs for this request from here on (routes, controllers,
+    //services, Prisma, error handler) sees requestId as its traceId, so their log lines
+    //carry it automatically — no need to pass requestId into every function by hand
+    runWithTrace(requestId, () => next())
 
 }

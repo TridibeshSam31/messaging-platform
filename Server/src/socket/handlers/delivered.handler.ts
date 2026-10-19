@@ -48,13 +48,17 @@ export async function handleDelivered(ws: WebSocket, data: DeliveredMessage) {
     // find the original sender
     const message = await prisma.message.findUnique({
         where:  { id: data.messageId },
-        select: { senderId: true },
+        select: { senderId: true, createdAt: true },
     })
 
     if (!message) return   // message deleted or bad ID — drop silently
 
     // Don't send a delivery receipt to yourself (edge case: sender is also recipient)
     if (message.senderId === recipient.userId) return
+
+    // Phase 9: message delivery latency = saved in DB → recipient's device says "got it".
+    // Both times come from the server's clock, so a wrong clock on the phone can't skew it.
+    metrics.websocket.deliveryLatencyMs.observe(Date.now() - message.createdAt.getTime())
 
     // Notify all the sockets of the sender
     // Covers multi-device: if Alice has two tabs open, both tabs get the tick.

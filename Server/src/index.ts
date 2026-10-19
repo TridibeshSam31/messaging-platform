@@ -19,6 +19,7 @@ import { createServer } from "http";
 import {requestLogger} from "./middleware/requestLogger.js"
 import {metrics} from "./lib/metrics.js"
 import { redisPublisher, redisSubscriber } from "./lib/redis.js"
+import { instanceId, startedAt } from "./lib/instance.js"
 
 dotenv.config();
 
@@ -57,23 +58,48 @@ app.get("/", (req, res) => {
   });
 });
 
+// Phase 9: one place that says "is Redis OK?" — used by /metrics and /health
+function redisStatus() {
+  if (!redisPublisher) return "disabled"          // single-server mode, Redis not configured
+  return redisPublisher.status === "ready" ? "healthy" : "unhealthy"
+}
+
 app.get("/metrics", (req, res) => {
   res.json({
+    // Phase 9: with several servers, numbers mean nothing without saying WHICH server
+    instanceId,
+    uptimeSeconds: Math.round((Date.now() - startedAt) / 1000),
+
     http: {
       requestsTotal: metrics.http.requestsTotal.get(),
       errorsTotal: metrics.http.errorsTotal.get(),
       requestDuration: {
         count: metrics.http.requestDurationMs.getCount(),
         averageMs: metrics.http.requestDurationMs.getAverage(),
+        maxMs: metrics.http.requestDurationMs.getMax(),
       },
     },
 
     websocket: {
       connectionsTotal: metrics.websocket.connectionsTotal.get(),
+      // this instance only — add up every instance's /metrics for the whole system
       activeConnections: metrics.websocket.activeConnections.get(),
+      reconnectsTotal: metrics.websocket.reconnectsTotal.get(),
       messagesReceivedTotal: metrics.websocket.messagesReceivedTotal.get(),
       messagesSentTotal: metrics.websocket.messagesSentTotal.get(),
       errorsTotal: metrics.websocket.errorsTotal.get(),
+      deliveryLatency: {
+        count: metrics.websocket.deliveryLatencyMs.getCount(),
+        averageMs: metrics.websocket.deliveryLatencyMs.getAverage(),
+        maxMs: metrics.websocket.deliveryLatencyMs.getMax(),
+      },
+    },
+
+    redis: {
+      status: redisStatus(),
+      connectionErrorsTotal: metrics.redis.connectionErrorsTotal.get(),
+      publishFailuresTotal: metrics.redis.publishFailuresTotal.get(),
+      presenceFailuresTotal: metrics.redis.presenceFailuresTotal.get(),
     },
 
     database: {
@@ -82,29 +108,50 @@ app.get("/metrics", (req, res) => {
       queryDuration: {
         count: metrics.database.queryDurationMs.getCount(),
         averageMs: metrics.database.queryDurationMs.getAverage(),
+        maxMs: metrics.database.queryDurationMs.getMax(),
       },
     },
   });
 });
 
+// Phase 9: health check for a load balancer / Render / Docker.
+// 200 = "send me traffic", 503 = "don't send me new traffic".
 app.get("/health", async (req, res) => {
+  // shutting down → tell the load balancer to stop routing NEW connections here,
+  // while the existing ones are being closed (graceful shutdown, Phase 4)
+  if (isShuttingDown) {
+    return res.status(503).json({ status: "shutting_down", instanceId })
+  }
+
+  let database = "healthy"
   try {
     await prisma.$queryRaw`SELECT 1` //check if the database is reachable and responsive
-
-    res.status(200).json({
-      status: "healthy",
-      server: "healthy",
-      database: "healthy",
-      timestamp: new Date().toISOString(),
-    })
-  } catch (error) {
-    res.status(503).json({
-      status: "unhealthy",
-      server: "healthy",
-      database: "unhealthy",
-      timestamp: new Date().toISOString(),
-    })
+  } catch {
+    database = "unhealthy"
   }
+
+  const redis = redisStatus()
+
+  // database down → this server can't save or load anything → unhealthy (503)
+  // Redis down → messages still work for users on THIS server (local fallback),
+  //              only cross-server delivery is broken → "degraded", still 200
+  const status =
+    database === "unhealthy" ? "unhealthy" : redis === "unhealthy" ? "degraded" : "healthy"
+
+  res.status(status === "unhealthy" ? 503 : 200).json({
+    status,
+    instanceId,
+    server: "healthy",
+    database,
+    redis,
+    websocket: {
+      // WebSocket health: is the WS server accepting, and how many sockets it holds
+      acceptingConnections: !isShuttingDown,
+      activeConnections: metrics.websocket.activeConnections.get(),
+    },
+    uptimeSeconds: Math.round((Date.now() - startedAt) / 1000),
+    timestamp: new Date().toISOString(),
+  })
 })
 
 app.use(limiter)
@@ -170,7 +217,9 @@ async function shutdown() {
 
     isShuttingDown = true;
 
-    log.info("server.shutdown.started");
+    // Phase 9: how long did shutdown take, and how many users did it affect?
+    const shutdownStartedAt = Date.now();
+    log.info("server.shutdown.started", { openConnections: clients.size });
     // Ask all WebSocket clients to close gracefully
     for (const ws of clients.keys()) {
         ws.close();
@@ -181,6 +230,8 @@ async function shutdown() {
     // Give connections a few seconds to close gracefully.
     // If they don't, forcefully terminate them.
     const forceCloseTimer = setTimeout(() => {
+        // Phase 9: if this shows up often, clients aren't closing cleanly
+        log.warn("server.shutdown.force_terminate", { remainingConnections: clients.size });
         for (const ws of clients.keys()) {
             ws.terminate();
         }
@@ -196,7 +247,7 @@ async function shutdown() {
         // allSettled: if Redis is already down, quit() rejects; ignore that and keep shutting down
         await Promise.allSettled([redisPublisher?.quit(), redisSubscriber?.quit()]);
 
-       log.info("server.shutdown.completed");
+       log.info("server.shutdown.completed", { durationMs: Date.now() - shutdownStartedAt });
 
         process.exit(0);
     });

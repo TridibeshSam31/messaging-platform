@@ -1,3 +1,6 @@
+import { getTraceId } from "./tracing.js";
+import { instanceId } from "./instance.js";
+
 type LogLevel = "debug" | "info" | "warn" | "error" | "fatal";
 
 interface LogData {
@@ -50,6 +53,12 @@ function writeLog(
         level,
         service: "messaging-server",
         environment: process.env.NODE_ENV || "development",
+        // Phase 9: which server wrote this line (WS-1 or WS-2?)
+        instanceId,
+        // Phase 9: id of the HTTP request / WebSocket message being handled right now.
+        // Comes from AsyncLocalStorage (lib/tracing.ts), so NO function has to pass it
+        // around — filter logs by one traceId to see everything that request did.
+        traceId: getTraceId(),
         event,
         ...sanitize(data) as Record<string, unknown>,
     };
