@@ -562,16 +562,16 @@ The near-term frontend gaps (group-management endpoints, the `useAuth.ts` build 
 
 ### Phase 1 — WebSocket Reliability
 
-- [ ] Implement heartbeat / ping-pong
-- [ ] Track last successful pong
-- [ ] Detect dead sockets
-- [ ] Terminate stale connections
-- [ ] Implement client-side automatic reconnection
-- [ ] Add exponential reconnect backoff
-- [ ] Reset reconnect attempts after successful connection
-- [ ] Add WebSocket connection state to frontend
-- [ ] Automatically rejoin rooms after reconnect
-- [ ] Make disconnect cleanup idempotent
+- [x] Implement heartbeat / ping-pong
+- [x] Track last successful pong
+- [x] Detect dead sockets
+- [x] Terminate stale connections
+- [x] Implement client-side automatic reconnection
+- [x] Add exponential reconnect backoff
+- [x] Reset reconnect attempts after successful connection
+- [x] Add WebSocket connection state to frontend
+- [x] Automatically rejoin rooms after reconnect
+- [x] Make disconnect cleanup idempotent
 
 **Target**
 

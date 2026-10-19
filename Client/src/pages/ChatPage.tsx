@@ -2,6 +2,7 @@ import { useEffect } from "react"
 import { Toaster } from "@/components/ui/sonner"
 import { AppLayout } from "@/components/layout/AppLayout"
 import { ChatWindow } from "@/components/chat/ChatWindow"
+import { ConnectionBanner } from "@/components/layout/ConnectionBanner"
 import { useAuthStore } from "@/stores/authStore"
 import { useChatStore } from "@/stores/chatStore"
 import { useSocketStore } from "@/stores/socketStore"
@@ -39,6 +40,7 @@ export function ChatPage() {
 
   return (
     <>
+      <ConnectionBanner />
       <AppLayout>
         <ChatWindow />
       </AppLayout>

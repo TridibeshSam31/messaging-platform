@@ -72,6 +72,8 @@ import { randomUUID } from "crypto"
 
 import { metrics } from "../lib/metrics.js"
 
+import { startHeartbeat } from "./heartbeat.js"
+
 
 
 
@@ -85,6 +87,8 @@ export interface ClientData {
     userId: string
 
     connectionId: string;
+
+    lastPongAt: number; // heartbeat: time (ms) of the last pong we received
 
 }
 
@@ -128,7 +132,13 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
 
    })
 
-   */ 
+   */
+
+
+
+    //heartbeat: start pinging all connected sockets
+
+    startHeartbeat(wss)
 
 
 
@@ -213,7 +223,239 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
 
                 userId: decoded.userId,
 
-                connectionId
+                connectionId,
+
+                lastPongAt: Date.now() // just connected = counts as alive
+
+            })
+
+
+
+            //heartbeat: every time the client answers our ping, remember when
+
+            ws.on("pong", () => {
+
+                const client = clients.get(ws)
+
+                if (client) client.lastPongAt = Date.now()
+
+            })
+
+
+            //disconnect
+
+            //registered right after clients.set (before any await below) so that if the
+            //socket dies while we are still talking to the DB, cleanup still runs
+
+
+
+            ws.on("close", async () => {
+
+                const client = clients.get(ws)
+
+
+
+                //idempotent cleanup: if this socket was already cleaned up, do nothing
+
+                if (!client) {
+
+                    return
+
+                }
+
+                //delete FIRST, so a second call hits the guard above and stops
+
+                clients.delete(ws)
+
+                metrics.websocket.activeConnections.decrement();
+
+
+
+                log.info("ws.connection.close", {
+
+    userId: client.userId,
+
+    connectionId: client.connectionId,
+
+});
+
+
+
+
+
+                //remove from rooms
+
+                //socketRooms contain the users that have joined 
+
+
+
+                const UsersJoinedRooms = socketRooms.get(ws)
+
+
+
+                if (UsersJoinedRooms) {
+
+                    //// On disconnect, socketRooms.get(ws) gives all the rooms that this socket had joined (e.g. room1, room2). We loop through each room, fetch its socket set from the rooms map, remove the disconnected socket using sockets.
+
+                    // delete(ws), and if that room becomes empty (size === 0), we delete the room itself to avoid memory leaks. This ensures that no disconnected socket or empty room remains in memory after the connection is closed.
+
+
+
+                    for (const roomId of UsersJoinedRooms) {
+
+                        const sockets = rooms.get(roomId)
+
+
+
+                        if (!sockets) continue
+
+
+
+                        sockets.delete(ws)
+
+
+
+                        // browser band hua bina leave_room bheje — baaki members ko batao
+
+                        for (const socket of sockets) {
+
+                            metrics.websocket.messagesSentTotal.increment();
+
+                            socket.send(JSON.stringify({
+
+                                type: "user_left",
+
+                                roomId,
+
+                                userId: client.userId
+
+                            }))
+
+                        }
+
+
+
+                        if (sockets.size === 0) {
+
+                            rooms.delete(roomId)
+
+                        }
+
+                    }
+
+
+
+
+
+                }
+
+
+
+                //cleanup
+
+
+
+                socketRooms.delete(ws)
+
+
+
+                //remove online user socket
+
+
+
+                const sockets = onlineUsers.get(client.userId)
+
+
+
+                if (sockets) {
+
+                    sockets.delete(ws)
+
+
+
+                    if (sockets.size === 0) {
+
+                        onlineUsers.delete(client.userId)
+
+
+
+                        //// During server shutdown:
+
+                        // don't perform per-user DB presence updates
+
+                        if (isShuttingDown()) {
+
+                        return
+
+                        }
+
+                        // DB mein OFFLINE + lastseen update
+
+                        await prisma.user.update({
+
+                            where: { id: client.userId },
+
+                            data: { status: "OFFLINE", lastseen: new Date() }
+
+                        })
+
+
+
+                        // user_offline broadcast — DB se conversations dhundho
+
+                        const memberships = await prisma.conversationMember.findMany({
+
+                            where: { userId: client.userId },
+
+                            select: { conversationId: true }
+
+                        })
+
+
+
+                        const userLastSeen = await prisma.user.findUnique({
+
+                            where: { id: client.userId },
+
+                            select: { lastseen: true }
+
+                        })
+
+
+
+                        for (const { conversationId } of memberships) {
+
+                            const roomSockets = rooms.get(conversationId)
+
+                            if (!roomSockets) continue
+
+
+
+                            for (const socket of roomSockets) {
+
+                                metrics.websocket.messagesSentTotal.increment();
+
+                                socket.send(JSON.stringify({
+
+                                    type: "user_offline",
+
+                                    userId: client.userId,
+
+                                    lastSeen: userLastSeen?.lastseen
+
+                                }))
+
+                            }
+
+                        }
+
+
+
+
+
+                    }
+
+                }
 
             })
 
@@ -268,6 +510,12 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
                     data: { status: "ONLINE" }
 
                 })
+
+
+
+                //socket closed while we were waiting for the DB? cleanup already ran, stop here
+
+                if (!clients.has(ws)) return
 
 
 
@@ -467,217 +715,6 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
 
 
 
-            //disconnect
-
-
-
-            ws.on("close", async () => {
-
-                const client = clients.get(ws)
-
-
-
-                if (!client) {
-
-                    return
-
-                }
-
-                metrics.websocket.activeConnections.decrement();
-
-
-
-                log.info("ws.connection.close", {
-
-    userId: client.userId,
-
-    connectionId: client.connectionId,
-
-});
-
-
-
-
-
-                //remove from rooms
-
-                //socketRooms contain the users that have joined 
-
-
-
-                const UsersJoinedRooms = socketRooms.get(ws)
-
-
-
-                if (UsersJoinedRooms) {
-
-                    //// On disconnect, socketRooms.get(ws) gives all the rooms that this socket had joined (e.g. room1, room2). We loop through each room, fetch its socket set from the rooms map, remove the disconnected socket using sockets.
-
-                    // delete(ws), and if that room becomes empty (size === 0), we delete the room itself to avoid memory leaks. This ensures that no disconnected socket or empty room remains in memory after the connection is closed.
-
-
-
-                    for (const roomId of UsersJoinedRooms) {
-
-                        const sockets = rooms.get(roomId)
-
-
-
-                        if (!sockets) continue
-
-
-
-                        sockets.delete(ws)
-
-
-
-                        // browser band hua bina leave_room bheje — baaki members ko batao
-
-                        for (const socket of sockets) {
-
-                            metrics.websocket.messagesSentTotal.increment();
-
-                            socket.send(JSON.stringify({
-
-                                type: "user_left",
-
-                                roomId,
-
-                                userId: client.userId
-
-                            }))
-
-                        }
-
-
-
-                        if (sockets.size === 0) {
-
-                            rooms.delete(roomId)
-
-                        }
-
-                    }
-
-
-
-
-
-                }
-
-
-
-                //cleanup
-
-
-
-                socketRooms.delete(ws)
-
-
-
-                clients.delete(ws)
-
-
-
-                //remove online user socket
-
-
-
-                const sockets = onlineUsers.get(client.userId)
-
-
-
-                if (sockets) {
-
-                    sockets.delete(ws)
-
-
-
-                    if (sockets.size === 0) {
-
-                        onlineUsers.delete(client.userId)
-
-
-
-                        //// During server shutdown:
-
-                        // don't perform per-user DB presence updates
-
-                        if (isShuttingDown()) {
-
-                        return
-
-                        }
-
-                        // DB mein OFFLINE + lastseen update
-
-                        await prisma.user.update({
-
-                            where: { id: client.userId },
-
-                            data: { status: "OFFLINE", lastseen: new Date() }
-
-                        })
-
-
-
-                        // user_offline broadcast — DB se conversations dhundho
-
-                        const memberships = await prisma.conversationMember.findMany({
-
-                            where: { userId: client.userId },
-
-                            select: { conversationId: true }
-
-                        })
-
-
-
-                        const userLastSeen = await prisma.user.findUnique({
-
-                            where: { id: client.userId },
-
-                            select: { lastseen: true }
-
-                        })
-
-
-
-                        for (const { conversationId } of memberships) {
-
-                            const roomSockets = rooms.get(conversationId)
-
-                            if (!roomSockets) continue
-
-
-
-                            for (const socket of roomSockets) {
-
-                                metrics.websocket.messagesSentTotal.increment();
-
-                                socket.send(JSON.stringify({
-
-                                    type: "user_offline",
-
-                                    userId: client.userId,
-
-                                    lastSeen: userLastSeen?.lastseen
-
-                                }))
-
-                            }
-
-                        }
-
-
-
-
-
-                    }
-
-                }
-
-            })
 
 
 

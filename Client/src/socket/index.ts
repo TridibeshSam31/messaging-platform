@@ -13,6 +13,26 @@ type Listener = (msg: IncomingMessage) => void
 let socket: WebSocket | null = null
 const listeners = new Set<Listener>()
 
+// --- Reconnection state (Phase 1) ---
+// how many times in a row we've failed to reconnect; drives the backoff delay
+let reconnectAttempts = 0
+// the pending setTimeout for the next retry, so we can cancel it on logout
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+// true when WE closed the socket on purpose (logout) — then we must NOT reconnect
+let closedOnPurpose = false
+
+const BASE_DELAY_MS = 1000 // first retry after 1s
+const MAX_DELAY_MS = 30000 // never wait longer than 30s
+
+// Exponential backoff: 1s, 2s, 4s, 8s, 16s, 30s, 30s...
+// Doubling the wait stops thousands of clients hammering a server that just restarted.
+function scheduleReconnect() {
+  const delay = Math.min(BASE_DELAY_MS * 2 ** reconnectAttempts, MAX_DELAY_MS)
+  reconnectAttempts++
+  useSocketStore.getState().setStatus("reconnecting") // UI shows the banner
+  reconnectTimer = setTimeout(connectSocket, delay)
+}
+
 // Server auth is `?token=` on the connection URL (Server/src/socket/index.ts),
 // not a header — WebSocket's constructor can't set headers from the browser
 // anyway, so this is the only option that matches the server's expectations.
@@ -23,13 +43,20 @@ export function connectSocket() {
     return
   }
 
-  socket = new WebSocket(`${WS_URL}/?token=${token}`)
+  closedOnPurpose = false
+  // only the very first attempt is "connecting"; retries stay "reconnecting"
+  if (reconnectAttempts === 0) useSocketStore.getState().setStatus("connecting")
 
-  socket.onopen = () => {
-    useSocketStore.getState().setConnected(true)
+  // keep a local reference so the handlers below know which socket they belong to
+  const ws = new WebSocket(`${WS_URL}/?token=${token}`)
+  socket = ws
+
+  ws.onopen = () => {
+    reconnectAttempts = 0 // success — next failure starts again from 1s
+    useSocketStore.getState().setStatus("connected") // ChatPage sees this and rejoins rooms
   }
 
-  socket.onmessage = (event) => {
+  ws.onmessage = (event) => {
     let data: IncomingMessage
     try {
       data = JSON.parse(event.data)
@@ -39,23 +66,31 @@ export function connectSocket() {
     listeners.forEach((listener) => listener(data))
   }
 
-  socket.onclose = () => {
-    useSocketStore.getState().setConnected(false)
+  ws.onclose = () => {
+    // an old socket finished closing after a newer one was created — ignore it
+    if (socket !== ws) return
+
     socket = null
-    // No reconnect-with-backoff here on purpose — the server doesn't have
-    // heartbeat/ping-pong yet either (see README Roadmap), so a client-side
-    // reconnect loop would just be guessing when the server is actually
-    // reachable again. Worth adding once the server side exists.
+
+    // logout → stay disconnected. Anything else (server restart, heartbeat
+    // terminate, wifi drop) → try again after a backoff delay.
+    if (!closedOnPurpose) scheduleReconnect()
   }
 
-  socket.onerror = () => {
-    socket?.close()
+  ws.onerror = () => {
+    ws.close() // onclose runs next and handles the reconnect
   }
 }
 
 export function disconnectSocket() {
+  closedOnPurpose = true
+  // cancel a retry that might be waiting, otherwise we'd reconnect after logout
+  if (reconnectTimer) clearTimeout(reconnectTimer)
+  reconnectTimer = null
+  reconnectAttempts = 0
   socket?.close()
   socket = null
+  useSocketStore.getState().setStatus("disconnected")
 }
 
 export function sendWS(payload: Record<string, unknown>) {
