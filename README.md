@@ -524,6 +524,8 @@ The backend validates its environment at startup using Zod (`Server/src/config/e
 | `CLIENT_URL` | Frontend origin, used for CORS and cookie scoping |
 | `REDIS_URL` | Optional. Redis connection string (e.g. `redis://localhost:6379`) used as the cross-instance realtime event bus (Phase 3). Unset = single-server mode: events are delivered locally only |
 | `TRUST_PROXY` | Optional. Set to `true` only when running behind a reverse proxy (nginx, Render) so Express reads the real client IP from `X-Forwarded-For` for rate limiting (Phase 4) |
+| `INSTANCE_ID` | Optional. Readable name for this server instance (e.g. `ws-1`), added to every log line, `/metrics` and `/health` (Phase 9). Defaults to a random short id |
+| `PRISMA_LOG_QUERIES` | Optional. `true` prints every SQL query (plain text, noisy) for debugging; off by default so logs stay pure JSON (Phase 9) |
 
 The following are also required at runtime for file uploads (`Server/src/lib/cloudinary.ts` throws if any are missing), though they aren't yet part of the Zod-validated `env.ts` schema above:
 
@@ -781,17 +783,17 @@ graph TD
 
 ### Phase 9 — Observability
 
-- [ ] Structured logging
-- [ ] Connection IDs
-- [ ] Request IDs
-- [ ] Active WebSocket connection metrics
-- [ ] Connections per instance
-- [ ] Reconnect frequency
-- [ ] Message delivery latency
-- [ ] Redis failure metrics
-- [ ] Database latency metrics
-- [ ] WebSocket health endpoint
-- [ ] Graceful shutdown logging
+- [x] Structured logging
+- [x] Connection IDs
+- [x] Request IDs
+- [x] Active WebSocket connection metrics
+- [x] Connections per instance
+- [x] Reconnect frequency
+- [x] Message delivery latency
+- [x] Redis failure metrics
+- [x] Database latency metrics
+- [x] WebSocket health endpoint
+- [x] Graceful shutdown logging
 
 ### Phase 10 — Testing & Load Testing
 

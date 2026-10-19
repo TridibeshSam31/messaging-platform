@@ -48,7 +48,9 @@ export function connectSocket() {
   if (reconnectAttempts === 0) useSocketStore.getState().setStatus("connecting")
 
   // keep a local reference so the handlers below know which socket they belong to
-  const ws = new WebSocket(`${WS_URL}/?token=${token}`)
+  // Phase 9: tell the server this is a RE-connect, so it can count how often clients drop
+  const reconnectFlag = reconnectAttempts > 0 ? "&reconnect=1" : ""
+  const ws = new WebSocket(`${WS_URL}/?token=${token}${reconnectFlag}`)
   socket = ws
 
   ws.onopen = () => {
