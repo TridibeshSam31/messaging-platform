@@ -18,6 +18,7 @@ import dotenv from "dotenv"
 import { createServer } from "http";
 import {requestLogger} from "./middleware/requestLogger.js"
 import {metrics} from "./lib/metrics.js"
+import { redisPublisher, redisSubscriber } from "./lib/redis.js"
 
 dotenv.config();
 
@@ -177,6 +178,9 @@ async function shutdown() {
         clearTimeout(forceCloseTimer);
 
         await prisma.$disconnect();
+        // close Redis connections too, otherwise they keep the process alive
+        redisPublisher?.disconnect();
+        redisSubscriber?.disconnect();
 
        log.info("server.shutdown.completed");
 

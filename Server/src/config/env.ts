@@ -9,7 +9,9 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url("DATABASE_URL must be a valid PostgreSQL connection string"),
   JWT_ACCESS_SECRET: z.string().min(8, "JWT_ACCESS_SECRET must be at least 8 characters"),
   JWT_REFRESH_SECRET: z.string().min(8, "JWT_REFRESH_SECRET must be at least 8 characters"),
-  CLIENT_URL: z.string().url("CLIENT_URL must be a valid frontend URL")
+  CLIENT_URL: z.string().url("CLIENT_URL must be a valid frontend URL"),
+  // optional: unset = single-server mode (no Redis), e.g. redis://localhost:6379
+  REDIS_URL: z.string().url().optional()
 })
 
 const parsedEnv = envSchema.safeParse(process.env)

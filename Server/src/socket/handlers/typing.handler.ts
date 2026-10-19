@@ -7,7 +7,7 @@ stop typing
 
 import { WebSocket } from "ws"
 import {clients,rooms} from "../index.js"
-import { metrics } from "../../lib/metrics.js"
+import { publishEvent } from "../realtime.js"
 
 //find the sender , find which room he/she is in , then broadcast that he/she is writing
 
@@ -35,22 +35,18 @@ export function handleTyping(ws:WebSocket,message:TypingMessage | StopTypingMess
         return
     }
 
-    //broadcast 
+    //broadcast through Redis (Phase 3), skipping my own socket
+    //`void` = fire-and-forget: publishEvent never throws, and typing doesn't need to wait
 
-    for(const socket of sockets){
-        //dont need to send the typing to myself
-
-        if(socket === ws){
-            continue
-        }
-
-        metrics.websocket.messagesSentTotal.increment();
-
-        socket.send(JSON.stringify({
+    void publishEvent({
+        target:"room",
+        roomId:message.roomId,
+        excludeConnectionId:sender.connectionId,
+        payload:{
             type:message.type,
             roomId:message.roomId,
             userId:sender.userId
-        }))
-    }
+        }
+    })
 
 }

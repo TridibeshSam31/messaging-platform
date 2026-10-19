@@ -522,6 +522,7 @@ The backend validates its environment at startup using Zod (`Server/src/config/e
 | `JWT_ACCESS_SECRET` | Secret used to sign short-lived access tokens (min. 8 characters) |
 | `JWT_REFRESH_SECRET` | Secret used to sign long-lived refresh tokens (min. 8 characters) |
 | `CLIENT_URL` | Frontend origin, used for CORS and cookie scoping |
+| `REDIS_URL` | Optional. Redis connection string (e.g. `redis://localhost:6379`) used as the cross-instance realtime event bus (Phase 3). Unset = single-server mode: events are delivered locally only |
 
 The following are also required at runtime for file uploads (`Server/src/lib/cloudinary.ts` throws if any are missing), though they aren't yet part of the Zod-validated `env.ts` schema above:
 
@@ -618,17 +619,17 @@ graph TD
 
 Introduce Redis as the cross-instance realtime event bus.
 
-- [ ] Add Redis
-- [ ] Create Redis connection module
-- [ ] Create realtime event publisher
-- [ ] Create realtime event subscriber
-- [ ] Define typed realtime event contracts
-- [ ] Publish message events through Redis
-- [ ] Subscribe every WebSocket instance
-- [ ] Route Redis events to local sockets
-- [ ] Handle Redis connection failures
-- [ ] Keep PostgreSQL as source of truth
-- [ ] Keep Redis Pub/Sub as event distribution only
+- [x] Add Redis
+- [x] Create Redis connection module
+- [x] Create realtime event publisher
+- [x] Create realtime event subscriber
+- [x] Define typed realtime event contracts
+- [x] Publish message events through Redis
+- [x] Subscribe every WebSocket instance
+- [x] Route Redis events to local sockets
+- [x] Handle Redis connection failures
+- [x] Keep PostgreSQL as source of truth
+- [x] Keep Redis Pub/Sub as event distribution only
 
 **Target**
 

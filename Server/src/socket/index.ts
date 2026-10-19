@@ -74,6 +74,8 @@ import { metrics } from "../lib/metrics.js"
 
 import { startHeartbeat } from "./heartbeat.js"
 
+import { startRealtimeSubscriber } from "./realtime.js"
+
 
 
 
@@ -139,6 +141,12 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
     //heartbeat: start pinging all connected sockets
 
     startHeartbeat(wss)
+
+
+
+    //Phase 3: listen to Redis so events published by ANY instance reach our sockets
+
+    startRealtimeSubscriber()
 
 
 

@@ -14,6 +14,7 @@ import { clients, rooms } from "../index.js"
 import { MessageHandlerClass } from "../../services/message.service.js";
 import { log } from "../../lib/logger.js";
 import { metrics } from "../../lib/metrics.js";
+import { publishEvent } from "../realtime.js";
 
 
 interface chatMessage {
@@ -79,25 +80,23 @@ export async function handleChat(ws: WebSocket, data: chatMessage) {
     messageId: chatMessage.id,
     } );
 
-    const recipientCount = [...sockets].filter((socket) => socket !== ws).length;
-
-    for (const socket of sockets) {
-        if (socket === ws) continue;
-
-        metrics.websocket.messagesSentTotal.increment();
-
-        socket.send(JSON.stringify({
+    //Phase 3: broadcast through Redis so room members on OTHER server instances get it too
+    //(recipient count is no longer known here — each instance only sees its own sockets)
+    await publishEvent({
+        target: "room",
+        roomId: data.roomId,
+        excludeConnectionId: sender.connectionId, //sender gets message_ack below instead
+        payload: {
             type: "chat",
             data: chatMessage
-        }));
-    }
+        }
+    })
 
     log.info("ws.chat.broadcast", {
     userId: sender.userId,
     connectionId: sender.connectionId,
     roomId: data.roomId,
     messageId: chatMessage.id,
-    recipientCount,
     });
 
     metrics.websocket.messagesSentTotal.increment();

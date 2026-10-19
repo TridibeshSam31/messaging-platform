@@ -1,5 +1,6 @@
 import { WebSocket } from "ws"
-import { clients, onlineUsers } from "../index.js"
+import { clients } from "../index.js"
+import { publishEvent } from "../realtime.js"
 import { prisma } from "../../lib/prisma.js"
 import { metrics } from "../../lib/metrics.js"
 
@@ -57,20 +58,15 @@ export async function handleDelivered(ws: WebSocket, data: DeliveredMessage) {
 
     // Notify all the sockets of the sender
     // Covers multi-device: if Alice has two tabs open, both tabs get the tick.
-    const senderSockets = onlineUsers.get(message.senderId)
-
-    if (senderSockets) {
-        const payload = JSON.stringify({
+    // Phase 3: publish always — the sender may be on a different server instance
+    await publishEvent({
+        target: "user",
+        userId: message.senderId,
+        payload: {
             type:        "message_delivered",
             messageId:   data.messageId,
             deliveredTo: recipient.userId,
             deliveredAt: new Date(),
-        })
-
-        for (const socket of senderSockets) {
-            metrics.websocket.messagesSentTotal.increment();
-
-            socket.send(payload)
-        }
-    }
+        },
+    })
 }

@@ -1,5 +1,6 @@
 import { WebSocket } from "ws"
-import { clients, rooms, onlineUsers } from "../index.js"
+import { clients } from "../index.js"
+import { publishEvent } from "../realtime.js"
 import { MessageHandlerClass } from "../../services/message.service.js"
 import { prisma } from "../../lib/prisma.js"
 import { metrics } from "../../lib/metrics.js"
@@ -64,21 +65,17 @@ export async function handleRead(ws: WebSocket, data: ReadMessage) {
 
     // BROADCAST "read_receipt" to all active sockets of the sender 
     // Supports multi-device: if the sender has a phone + laptop open, both get it.
-    const senderSockets = onlineUsers.get(message.senderId)
-
-    if (senderSockets) {
-        const payload = JSON.stringify({
+    // Phase 3: no local onlineUsers check anymore — the sender may be connected to a
+    // DIFFERENT server instance. Publish always; whichever instance has their sockets delivers.
+    await publishEvent({
+        target: "user",
+        userId: message.senderId,
+        payload: {
             type:           "read_receipt",
             messageId:      data.messageId,
             conversationId: data.conversationId,
             readBy:         reader.userId,
             readAt:         receipt.readAt,
-        })
-
-        for (const socket of senderSockets) {
-            metrics.websocket.messagesSentTotal.increment();
-
-            socket.send(payload)
-        }
-    }
+        },
+    })
 }
