@@ -74,7 +74,9 @@ import { metrics } from "../lib/metrics.js"
 
 import { startHeartbeat } from "./heartbeat.js"
 
-import { startRealtimeSubscriber } from "./realtime.js"
+import { startRealtimeSubscriber, publishEvent } from "./realtime.js"
+
+import { addPresence, removePresence, getPresenceCount } from "../lib/presence.js"
 
 
 
@@ -325,21 +327,13 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
 
                         // browser band hua bina leave_room bheje — baaki members ko batao
 
-                        for (const socket of sockets) {
+                        //Phase 4: through Redis, so members on other instances hear it too
 
-                            metrics.websocket.messagesSentTotal.increment();
-
-                            socket.send(JSON.stringify({
-
-                                type: "user_left",
-
-                                roomId,
-
-                                userId: client.userId
-
-                            }))
-
-                        }
+                        void publishEvent({
+                            target: "room",
+                            roomId,
+                            payload: { type: "user_left", roomId, userId: client.userId }
+                        })
 
 
 
@@ -367,112 +361,61 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
 
 
 
-                //remove online user socket
-
-
+                //remove online user socket (local map — still needed to route events to this instance's sockets)
 
                 const sockets = onlineUsers.get(client.userId)
 
-
-
                 if (sockets) {
-
                     sockets.delete(ws)
-
-
-
-                    if (sockets.size === 0) {
-
-                        onlineUsers.delete(client.userId)
-
-
-
-                        //// During server shutdown:
-
-                        // don't perform per-user DB presence updates
-
-                        if (isShuttingDown()) {
-
-                        return
-
-                        }
-
-                        // DB mein OFFLINE + lastseen update
-
-                        await prisma.user.update({
-
-                            where: { id: client.userId },
-
-                            data: { status: "OFFLINE", lastseen: new Date() }
-
-                        })
-
-
-
-                        // user_offline broadcast — DB se conversations dhundho
-
-                        const memberships = await prisma.conversationMember.findMany({
-
-                            where: { userId: client.userId },
-
-                            select: { conversationId: true }
-
-                        })
-
-
-
-                        const userLastSeen = await prisma.user.findUnique({
-
-                            where: { id: client.userId },
-
-                            select: { lastseen: true }
-
-                        })
-
-
-
-                        //user reconnected (e.g. page refresh) while we were waiting for the DB?
-
-                        //then they are online again — don't tell everyone they went offline
-
-                        if (onlineUsers.has(client.userId)) return
-
-
-
-                        for (const { conversationId } of memberships) {
-
-                            const roomSockets = rooms.get(conversationId)
-
-                            if (!roomSockets) continue
-
-
-
-                            for (const socket of roomSockets) {
-
-                                metrics.websocket.messagesSentTotal.increment();
-
-                                socket.send(JSON.stringify({
-
-                                    type: "user_offline",
-
-                                    userId: client.userId,
-
-                                    lastSeen: userLastSeen?.lastseen
-
-                                }))
-
-                            }
-
-                        }
-
-
-
-
-
-                    }
-
+                    if (sockets.size === 0) onlineUsers.delete(client.userId)
                 }
 
+                //Phase 4: ask Redis how many connections this user has left on ALL instances
+
+                const remaining = await removePresence(client.userId, client.connectionId)
+
+                //another tab / device / instance is still connected → user is still online
+
+                if (remaining > 0) return
+
+                // During server shutdown:
+                // don't perform per-user DB presence updates (users reconnect to another instance)
+
+                if (isShuttingDown()) return
+
+                // DB mein OFFLINE + lastseen update
+
+                const userLastSeen = await prisma.user.update({
+                    where: { id: client.userId },
+                    data: { status: "OFFLINE", lastseen: new Date() },
+                    select: { lastseen: true }
+                })
+
+                // user_offline broadcast — DB se conversations dhundho
+
+                const memberships = await prisma.conversationMember.findMany({
+                    where: { userId: client.userId },
+                    select: { conversationId: true }
+                })
+
+                //user reconnected (e.g. page refresh, maybe on another instance) while we were
+                //waiting for the DB? then they are online again — don't tell everyone they went offline
+
+                if ((await getPresenceCount(client.userId)) > 0) return
+
+                //Phase 4: through Redis, so room members on other instances hear it too
+
+                for (const { conversationId } of memberships) {
+                    void publishEvent({
+                        target: "room",
+                        roomId: conversationId,
+                        payload: {
+                            type: "user_offline",
+                            userId: client.userId,
+                            lastSeen: userLastSeen.lastseen
+                        }
+                    })
+                }
             })
 
 
@@ -492,90 +435,6 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
         metrics.websocket.connectionsTotal.increment();
 
         metrics.websocket.activeConnections.increment();
-
-
-
-            //online users
-
-
-
-            if (!onlineUsers.has(decoded.userId)) {
-
-                onlineUsers.set(decoded.userId, new Set())
-
-            }
-
-
-
-            onlineUsers.get(decoded.userId)?.add(ws)
-
-
-
-
-
-
-
-            const isFirstSocket = onlineUsers.get(decoded.userId)!.size === 1
-
-            if (isFirstSocket) {
-
-                await prisma.user.update({
-
-                    where: { id: decoded.userId },
-
-                    data: { status: "ONLINE" }
-
-                })
-
-
-
-                //socket closed while we were waiting for the DB? cleanup already ran, stop here
-
-                if (!clients.has(ws)) return
-
-
-
-                // user_online broadcast — notify all room peers
-
-                // DB se saari conversations dhundho kyunki socketRooms abhi empty hai (join_room nahi hua)
-
-                const memberships = await prisma.conversationMember.findMany({
-
-                    where: { userId: decoded.userId },
-
-                    select: { conversationId: true }
-
-                })
-
-
-
-                for (const { conversationId } of memberships) {
-
-                    const roomSockets = rooms.get(conversationId)
-
-                    if (!roomSockets) continue
-
-
-
-                    for (const socket of roomSockets) {
-
-                        if (socket === ws) continue
-
-                        metrics.websocket.messagesSentTotal.increment()
-
-                        socket.send(JSON.stringify({
-
-                            type: "user_online",
-
-                            userId: decoded.userId
-
-                        }))
-
-                    }
-
-                }
-
-            }
 
 
 
@@ -737,6 +596,60 @@ export function initializeWebSocket(httpServer: Server,isShuttingDown:()=>boolea
 
 
 
+
+            //online users — runs AFTER all ws.on(...) listeners are registered, because the
+            //awaits below take time and a "message" (e.g. join_room) arriving with no
+            //listener yet would be silently dropped
+
+            if (!onlineUsers.has(decoded.userId)) {
+                onlineUsers.set(decoded.userId, new Set())
+            }
+
+            onlineUsers.get(decoded.userId)?.add(ws)
+
+            //Phase 4: count connections across ALL instances (Redis), not just this one
+
+            const totalConnections = await addPresence(decoded.userId, connectionId)
+
+            //socket closed while we were waiting? cleanup already ran, stop here
+
+            if (!clients.has(ws)) return
+
+            const isFirstSocket = totalConnections === 1
+
+            if (isFirstSocket) {
+
+                await prisma.user.update({
+                    where: { id: decoded.userId },
+                    data: { status: "ONLINE" }
+                })
+
+                //socket closed while we were waiting for the DB? cleanup already ran, stop here
+
+                if (!clients.has(ws)) return
+
+                // user_online broadcast — notify all room peers
+                // DB se saari conversations dhundho kyunki socketRooms abhi empty hai (join_room nahi hua)
+
+                const memberships = await prisma.conversationMember.findMany({
+                    where: { userId: decoded.userId },
+                    select: { conversationId: true }
+                })
+
+                //Phase 4: through Redis so peers on other instances see it; skip this new socket
+
+                for (const { conversationId } of memberships) {
+                    void publishEvent({
+                        target: "room",
+                        roomId: conversationId,
+                        excludeConnectionId: connectionId,
+                        payload: {
+                            type: "user_online",
+                            userId: decoded.userId
+                        }
+                    })
+                }
+            }
 
         } catch (error) {
 

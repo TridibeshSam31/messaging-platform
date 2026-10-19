@@ -19,6 +19,7 @@ import { WebSocket } from "ws";
 import { rooms, socketRooms, clients } from "../index.js"
 import { prisma } from "../../lib/prisma.js";
 import { metrics } from "../../lib/metrics.js";
+import { publishEvent } from "../realtime.js";
 
 interface JoinRoomMessage {
     type: "join_room",
@@ -102,19 +103,13 @@ export async function handlePresence(ws: WebSocket, message: JoinRoomMessage | L
 
         //Notify other members
 
-        for (const socket of rooms.get(roomId)!) {
-
-            if (socket === ws) continue;
-
-            metrics.websocket.messagesSentTotal.increment();
-
-            socket.send(JSON.stringify({
-                type: "user_joined",
-                roomId,
-                userId: currentUser?.userId
-            }));
-
-        }
+        //Phase 4: through Redis, so members connected to other instances hear it too
+        void publishEvent({
+            target: "room",
+            roomId,
+            excludeConnectionId: currentUser.connectionId,
+            payload: { type: "user_joined", roomId, userId: currentUser.userId }
+        })
 
         return
 
@@ -137,16 +132,12 @@ export async function handlePresence(ws: WebSocket, message: JoinRoomMessage | L
 
         socketRooms.get(ws)?.delete(roomId);
 
-        for (const socket of rooms.get(roomId) ?? []) {
-
-            metrics.websocket.messagesSentTotal.increment();
-
-            socket.send(JSON.stringify({
-                type: "user_left",
-                roomId,
-                userId: currentUser?.userId
-            }));
-        }
+        //Phase 4: through Redis (this socket already left the local room, so it won't get it)
+        void publishEvent({
+            target: "room",
+            roomId,
+            payload: { type: "user_left", roomId, userId: currentUser.userId }
+        })
 
         if (rooms.get(roomId)?.size === 0) {
             rooms.delete(roomId);

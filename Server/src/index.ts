@@ -25,6 +25,14 @@ dotenv.config();
 
 const app = express();
 
+// Phase 4: behind nginx (or Render's proxy) every request comes from the proxy's IP,
+// so the rate limiter would treat ALL users as one. "trust proxy" makes Express read
+// the real client IP from the X-Forwarded-For header the proxy adds.
+// Only enable it when there really is a proxy in front, otherwise clients could fake that header.
+if (process.env.TRUST_PROXY === "true") {
+  app.set("trust proxy", 1);
+}
+
 
 const server = createServer(app);
 
@@ -117,10 +125,14 @@ async function startServer() {
     await prisma.$connect();
     log.info("database.connected");
 
-    // Reset any stale presence statuses left from previous server runs
-    await prisma.user.updateMany({
-      data: { status: "OFFLINE" },
-    });
+    // Reset any stale presence statuses left from previous server runs.
+    // Phase 4: only in single-server mode! With Redis there may be OTHER instances
+    // still serving connected users — wiping everyone to OFFLINE would be wrong.
+    if (!redisPublisher) {
+      await prisma.user.updateMany({
+        data: { status: "OFFLINE" },
+      });
+    }
 
     
 
@@ -178,9 +190,11 @@ async function shutdown() {
         clearTimeout(forceCloseTimer);
 
         await prisma.$disconnect();
-        // close Redis connections too, otherwise they keep the process alive
-        redisPublisher?.disconnect();
-        redisSubscriber?.disconnect();
+        // close Redis connections too, otherwise they keep the process alive.
+        // quit() (not disconnect()) waits for pending commands — e.g. the presence
+        // removals the socket close handlers just sent — before closing.
+        // allSettled: if Redis is already down, quit() rejects; ignore that and keep shutting down
+        await Promise.allSettled([redisPublisher?.quit(), redisSubscriber?.quit()]);
 
        log.info("server.shutdown.completed");
 

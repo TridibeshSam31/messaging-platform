@@ -523,6 +523,7 @@ The backend validates its environment at startup using Zod (`Server/src/config/e
 | `JWT_REFRESH_SECRET` | Secret used to sign long-lived refresh tokens (min. 8 characters) |
 | `CLIENT_URL` | Frontend origin, used for CORS and cookie scoping |
 | `REDIS_URL` | Optional. Redis connection string (e.g. `redis://localhost:6379`) used as the cross-instance realtime event bus (Phase 3). Unset = single-server mode: events are delivered locally only |
+| `TRUST_PROXY` | Optional. Set to `true` only when running behind a reverse proxy (nginx, Render) so Express reads the real client IP from `X-Forwarded-For` for rate limiting (Phase 4) |
 
 The following are also required at runtime for file uploads (`Server/src/lib/cloudinary.ts` throws if any are missing), though they aren't yet part of the Zod-validated `env.ts` schema above:
 
@@ -650,14 +651,14 @@ Run multiple WebSocket instances behind a load balancer.
 
 - [ ] Run WS-1
 - [ ] Run WS-2
-- [ ] Add reverse proxy/load balancer
-- [ ] Keep connection maps local to each instance
+- [x] Add reverse proxy/load balancer
+- [x] Keep connection maps local to each instance
 - [ ] Verify cross-instance messaging
 - [ ] Verify typing across instances
 - [ ] Verify read receipts across instances
 - [ ] Verify delivered receipts across instances
 - [ ] Verify presence across instances
-- [ ] Handle graceful WebSocket instance shutdown
+- [x] Handle graceful WebSocket instance shutdown
 
 **Critical Test**
 
